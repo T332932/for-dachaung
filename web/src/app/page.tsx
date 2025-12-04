@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { QuestionUploader, QuestionAnalysisResult } from '@/components/question/QuestionUploader';
 import { QuestionEditor } from '@/components/question/QuestionEditor';
 
@@ -9,16 +9,19 @@ export default function Home() {
   const [currentQuestion, setCurrentQuestion] = useState<QuestionAnalysisResult | null>(null);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
 
-  const handleAnalyzed = (data: QuestionAnalysisResult, file: File) => {
+  const handleAnalyzed = useCallback((data: QuestionAnalysisResult, file: File) => {
     setCurrentQuestion(data);
     setCurrentFile(file);
     setStep('edit');
-  };
+  }, []);
 
-  const handleSave = (savedData: QuestionAnalysisResult) => {
-    console.log('Saved:', savedData);
+  const handleSave = useCallback((savedData: QuestionAnalysisResult) => {
+    // 保存成功，跳转到成功页面
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Saved:', savedData);
+    }
     setStep('success');
-  };
+  }, []);
 
   useEffect(() => {
     if (step === 'success') {

@@ -22,9 +22,16 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             lg: "h-11 rounded-md px-8"
         }
 
+        const combinedClassName = [
+            baseStyles,
+            variants[variant],
+            sizes[size],
+            className
+        ].filter(Boolean).join(' ');
+
         return (
             <button
-                className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className || ''}`}
+                className={combinedClassName}
                 ref={ref}
                 {...props}
             />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { questionApi, QuestionPayload } from '@/lib/api-client';
 import { QuestionAnalysisResult } from './QuestionUploader';
@@ -15,8 +15,28 @@ interface QuestionEditorProps {
 export function QuestionEditor({ initialData, file, onSave, onCancel }: QuestionEditorProps) {
     const [isSaving, setIsSaving] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isMountedRef = useRef(true);
+    
+    // 组件挂载/卸载状态管理
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+            // 清理定时器
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
 
     const handleSubmit = async () => {
+        // 防止重复提交
+        if (isSaving) {
+            return;
+        }
+        
+        // 验证必填字段
         if (!initialData.questionText?.trim()) {
             alert('题目内容不能为空，请重新上传');
             return;
@@ -25,70 +45,152 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
             alert('答案不能为空，请重新上传');
             return;
         }
+        
         setIsSaving(true);
         try {
-            // 将解析结果直接入库，不提供前端编辑
+            // 定义有效的枚举值
+            const validDifficulties = ['easy', 'medium', 'hard'] as const;
+            const validQuestionTypes = ['choice', 'fillblank', 'solve', 'proof'] as const;
+            
+            // 类型守卫函数
+            const isValidDifficulty = (val: any): val is typeof validDifficulties[number] => {
+                return typeof val === 'string' && validDifficulties.includes(val as any);
+            };
+            
+            const isValidQuestionType = (val: any): val is typeof validQuestionTypes[number] => {
+                return typeof val === 'string' && validQuestionTypes.includes(val as any);
+            };
+            
+            // 处理选项：确保是数组或null
+            let processedOptions: string[] | null = null;
+            if (initialData.options) {
+                if (Array.isArray(initialData.options) && initialData.options.length > 0) {
+                    processedOptions = initialData.options;
+                }
+            }
+            
+            // 处理知识点：确保是数组
+            let processedKnowledgePoints: string[] = [];
+            if (initialData.knowledgePoints) {
+                if (Array.isArray(initialData.knowledgePoints)) {
+                    processedKnowledgePoints = initialData.knowledgePoints.filter(kp => typeof kp === 'string');
+                }
+            }
+            
             const payload: QuestionPayload = {
-                questionText: initialData.questionText || '',
-                options: initialData.options || null,
-                answer: initialData.answer || '',
+                questionText: initialData.questionText.trim(),
+                options: processedOptions,
+                answer: initialData.answer.trim(),
                 explanation: undefined,
                 hasGeometry: Boolean(initialData.hasGeometry),
                 geometrySvg: initialData.geometrySvg || null,
                 geometryTikz: null,
-                knowledgePoints: initialData.knowledgePoints || [],
-                difficulty: initialData.difficulty || 'medium',
-                questionType: initialData.questionType || 'solve',
+                knowledgePoints: processedKnowledgePoints,
+                difficulty: isValidDifficulty(initialData.difficulty) ? initialData.difficulty : 'medium',
+                questionType: isValidQuestionType(initialData.questionType) ? initialData.questionType : 'solve',
                 source: undefined,
                 year: undefined,
                 aiGenerated: true,
             };
+            
             await questionApi.create(payload);
-            onSave(initialData);
-        } catch (error) {
-            console.error('Save failed:', error);
-            alert('保存失败');
+            
+            // 检查组件是否仍然挂载
+            if (isMountedRef.current) {
+                onSave(initialData);
+            }
+        } catch (error: any) {
+            // 只在组件仍然挂载时显示错误
+            if (isMountedRef.current) {
+                console.error('Save failed:', error);
+                const errorMessage = error?.userMessage || error?.response?.data?.detail || error?.message || '保存失败，请重试';
+                alert(errorMessage);
+            }
         } finally {
-            setIsSaving(false);
+            // 只在组件仍然挂载时更新状态
+            if (isMountedRef.current) {
+                setIsSaving(false);
+            }
         }
     };
 
     const handleDownloadPdf = async () => {
+        // 防止重复下载
+        if (isDownloading) {
+            return;
+        }
+        
         if (!file) {
             alert('缺少原始文件，无法生成 PDF 预览，请重新上传。');
             return;
         }
         setIsDownloading(true);
+        let blobUrl: string | null = null;
         try {
-            const blob = await questionApi.previewPdf(file, { includeAnswer: true, includeExplanation: false }) as any;
+            const blob = await questionApi.previewPdf(file, { includeAnswer: true, includeExplanation: false });
+            
+            // 检查组件是否仍然挂载
+            if (!isMountedRef.current) {
+                return;
+            }
+            
             if (!(blob instanceof Blob) || blob.size === 0) {
                 throw new Error('PDF生成失败：返回的数据无效');
             }
-            const url = window.URL.createObjectURL(blob);
+            blobUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.href = url;
+            link.href = blobUrl;
             link.download = 'question_preview.pdf';
             document.body.appendChild(link);
             link.click();
             link.remove();
-            window.URL.revokeObjectURL(url);
+            // 延迟清理 URL，确保下载已开始
+            timeoutRef.current = setTimeout(() => {
+                if (blobUrl && isMountedRef.current) {
+                    window.URL.revokeObjectURL(blobUrl);
+                }
+                timeoutRef.current = null;
+            }, 100);
         } catch (error: any) {
+            // 只在组件仍然挂载时处理错误
+            if (!isMountedRef.current) {
+                return;
+            }
+            
             console.error('PDF preview failed:', error);
+            // 清理可能创建的 URL 和定时器
+            if (blobUrl) {
+                window.URL.revokeObjectURL(blobUrl);
+            }
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
+            }
+            
             // 尝试读取后端错误
             const respData = error?.response?.data;
+            let errorMessage = 'PDF 预览失败';
+            
             if (respData instanceof Blob) {
                 try {
-                    const text = await respData.text();
+                    // 克隆 Blob 以避免消耗原始 Blob
+                    const clonedBlob = respData.slice();
+                    const text = await clonedBlob.text();
                     const json = JSON.parse(text);
-                    alert(`PDF 预览失败：${json.detail || json.error || '未知错误'}`);
+                    errorMessage = `PDF 预览失败：${json.detail || json.error || '未知错误'}`;
                 } catch {
-                    alert('PDF 预览失败，请确认后端已安装 pdflatex');
+                    errorMessage = error?.userMessage || 'PDF 预览失败，请确认后端已安装 pdflatex';
                 }
             } else {
-                alert('PDF 预览失败，请确认后端已安装 pdflatex');
+                errorMessage = error?.userMessage || 'PDF 预览失败，请确认后端已安装 pdflatex';
             }
+            
+            alert(errorMessage);
         } finally {
-            setIsDownloading(false);
+            // 只在组件仍然挂载时更新状态
+            if (isMountedRef.current) {
+                setIsDownloading(false);
+            }
         }
     };
 
@@ -109,12 +211,22 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
 
             <div className="grid grid-cols-1 gap-6">
                 {/* 几何图形预览 */}
-                {initialData?.hasGeometry && (initialData?.svgPng || initialData?.geometrySvg) && (
+                {initialData?.hasGeometry && ((typeof initialData?.svgPng === 'string' && initialData.svgPng.startsWith('data:image')) || initialData?.geometrySvg) && (
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">📐 几何图形 (AI生成)</label>
                         <div className="border rounded-md p-4 bg-white flex justify-center overflow-auto max-h-[320px]">
-                            {initialData.svgPng ? (
-                                <img src={initialData.svgPng} alt="geometry preview" className="max-h-[280px]" />
+                            {initialData.svgPng && initialData.svgPng.startsWith('data:image') ? (
+                                <img 
+                                    src={initialData.svgPng} 
+                                    alt="geometry preview" 
+                                    className="max-h-[280px]"
+                                    onError={(e) => {
+                                        console.error('Image load failed:', e);
+                                        // 如果图片加载失败，尝试显示 SVG
+                                        const target = e.currentTarget;
+                                        target.style.display = 'none';
+                                    }}
+                                />
                             ) : (
                                 <div
                                     className="w-full"
@@ -154,15 +266,17 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
                 </div>
 
                 {/* 知识点 */}
-                {initialData?.knowledgePoints && initialData.knowledgePoints.length > 0 && (
+                {initialData?.knowledgePoints && Array.isArray(initialData.knowledgePoints) && initialData.knowledgePoints.length > 0 && (
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">🎯 知识点</label>
                         <div className="flex flex-wrap gap-2">
-                            {initialData.knowledgePoints.map((kp: string, idx: number) => (
-                                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
-                                    {kp}
-                                </span>
-                            ))}
+                            {initialData.knowledgePoints
+                                .filter((kp): kp is string => typeof kp === 'string')
+                                .map((kp: string, idx: number) => (
+                                    <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
+                                        {kp}
+                                    </span>
+                                ))}
                         </div>
                     </div>
                 )}
