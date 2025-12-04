@@ -5,6 +5,7 @@ import json
 import mimetypes
 import os
 from typing import Optional
+import re
 
 from fastapi import UploadFile
 
@@ -81,7 +82,8 @@ class AIService:
     async def _analyze_with_gemini(self, file: UploadFile):
         """使用Gemini分析"""
         file_bytes = await file.read()
-        file.file.seek(0)
+        if hasattr(file, "file") and hasattr(file.file, "seek"):
+            file.file.seek(0)
         mime, _ = mimetypes.guess_type(file.filename or "")
         mime = mime or "image/png"
         image_part = {"mime_type": mime, "data": file_bytes}
@@ -96,7 +98,8 @@ class AIService:
         import base64
         
         file_bytes = await file.read()
-        file.file.seek(0)
+        if hasattr(file, "file") and hasattr(file.file, "seek"):
+            file.file.seek(0)
         base64_image = base64.b64encode(file_bytes).decode('utf-8')
         
         # 判断MIME类型
@@ -177,6 +180,7 @@ SVG 生成要求：
             lower_qt = qt.lower()
             # 常见中文/英文提示词
             split_tokens = ["答案：", "参考答案", "解答：", "解析：", "solution", "answer:"]
+            ans_part = None
             for token in split_tokens:
                 if token.lower() in lower_qt:
                     idx = lower_qt.index(token.lower())
@@ -186,7 +190,23 @@ SVG 生成要求：
                     if ans_part and ans_part not in ans:
                         data["answer"] = (ans + "\n\n" + ans_part).strip()
                     break
+            # 清理 questionText 中的图片/占位
+            data["questionText"] = self._strip_images(data.get("questionText") or "").strip()
         return data
+
+    def _strip_images(self, text: str) -> str:
+        """
+        去掉 questionText 中的 markdown 图片（尤其是 data:image base64），保留纯文本。
+        """
+        if not text:
+            return ""
+        # 优先移除 base64 图片
+        text = re.sub(r'!\[[^\]]*\]\(data:image/[^)]+\)', '', text)
+        # 可选：移除所有 Markdown 图片（如需）：
+        # text = re.sub(r'!\[[^\]]*\]\([^)]+\)', '', text)
+        # 去掉 HTML <img ...>
+        text = re.sub(r'<img[^>]*>', '', text, flags=re.IGNORECASE)
+        return text
     
     def _stub_response(self, filename: str):
         """占位响应（未配置API时）"""
