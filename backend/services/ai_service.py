@@ -44,8 +44,11 @@ class AIService:
         """初始化Gemini"""
         api_key = settings.gemini_api_key or os.getenv("GEMINI_API_KEY")
         if api_key and genai:
-            genai.configure(api_key=api_key)
-            self.client = genai.GenerativeModel(settings.gemini_model)
+            try:
+                genai.configure(api_key=api_key)
+                self.client = genai.GenerativeModel(settings.gemini_model)
+            except Exception:
+                self.client = None
         else:
             self.client = None
     
@@ -55,10 +58,13 @@ class AIService:
         base_url = settings.openai_base_url
         
         if api_key and OpenAI:
-            self.client = OpenAI(
-                api_key=api_key,
-                base_url=base_url  # None则使用默认OpenAI URL
-            )
+            try:
+                self.client = OpenAI(
+                    api_key=api_key,
+                    base_url=base_url  # None则使用默认OpenAI URL
+                )
+            except Exception:
+                self.client = None
         else:
             self.client = None
     
@@ -75,6 +81,7 @@ class AIService:
     async def _analyze_with_gemini(self, file: UploadFile):
         """使用Gemini分析"""
         file_bytes = await file.read()
+        file.file.seek(0)
         mime, _ = mimetypes.guess_type(file.filename or "")
         mime = mime or "image/png"
         image_part = {"mime_type": mime, "data": file_bytes}
@@ -89,6 +96,7 @@ class AIService:
         import base64
         
         file_bytes = await file.read()
+        file.file.seek(0)
         base64_image = base64.b64encode(file_bytes).decode('utf-8')
         
         # 判断MIME类型
