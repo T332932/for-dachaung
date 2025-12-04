@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { questionApi } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
 
 export interface QuestionAnalysisResult {
     questionText?: string;
@@ -32,9 +33,40 @@ const isValidImageFile = (file: File): boolean => {
     return validExtensions.some(ext => fileName.endsWith(ext));
 };
 
+// 默认提示词
+const DEFAULT_PROMPT = `重要：questionText 只包含题干和选项，不要包含任何答案或解析；答案与解题步骤只放在 answer 字段。
+SVG 生成要求：
+- 使用 <line>, <circle>, <ellipse>, <path>, <text> 标签
+- 虚线用 stroke-dasharray="5,5"
+- 文本标注用 <text> 标签，内容为数学符号
+- viewBox="0 0 400 400"，坐标准确`;
+
 export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAnalysisResult, file: File) => void }) {
     const [isUploading, setIsUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
+    const [showPromptEditor, setShowPromptEditor] = useState(false);
+    const [customPrompt, setCustomPrompt] = useState(DEFAULT_PROMPT);
+
+    // 尝试从localStorage加载保存的提示词
+    useEffect(() => {
+        const saved = localStorage.getItem('zujuan_custom_prompt');
+        if (saved) {
+            setCustomPrompt(saved);
+        }
+    }, []);
+
+    // 保存提示词到localStorage
+    const savePrompt = () => {
+        localStorage.setItem('zujuan_custom_prompt', customPrompt);
+        setShowPromptEditor(false);
+        alert('提示词已保存');
+    };
+
+    // 重置为默认提示词
+    const resetPrompt = () => {
+        setCustomPrompt(DEFAULT_PROMPT);
+        localStorage.removeItem('zujuan_custom_prompt');
+    };
 
     const handleDrag = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -55,45 +87,47 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
         if (isUploading) {
             return;
         }
-        
+
         // 验证文件类型
         if (!isValidImageFile(file)) {
             alert('请上传图片文件（JPG、PNG等格式）');
             return;
         }
-        
+
         // 验证文件大小
         if (file.size > MAX_FILE_SIZE) {
             alert('文件大小不能超过 10MB，请压缩后重试');
             return;
         }
-        
+
         setIsUploading(true);
         try {
-            const result = await questionApi.preview(file);
-            
+            // 使用自定义提示词（如果与默认不同）
+            const promptToUse = customPrompt !== DEFAULT_PROMPT ? customPrompt : undefined;
+            const result = await questionApi.preview(file, { customPrompt: promptToUse });
+
             // 检查返回结构
             if (!result) {
                 throw new Error('API返回数据为空');
             }
-            
+
             // 优先使用 analysis 字段，如果没有则使用 result 本身
             const analysisData = result.analysis || result;
             if (!analysisData || (typeof analysisData !== 'object')) {
                 throw new Error('API返回数据格式错误');
             }
-            
+
             const merged: QuestionAnalysisResult = {
                 ...analysisData,
                 svgPng: result?.svgPng || null,
                 latex: result?.latex,
             };
-            
+
             // 验证必要字段
             if (!merged.questionText?.trim() && !merged.answer?.trim()) {
                 throw new Error('AI返回数据不完整：缺少题目内容或答案');
             }
-            
+
             onAnalyzed(merged, file);
         } catch (error: any) {
             console.error('Analysis failed:', error);
@@ -102,7 +136,7 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
         } finally {
             setIsUploading(false);
         }
-    }, [onAnalyzed, isUploading]);
+    }, [onAnalyzed, isUploading, customPrompt]);
 
     const handleDrop = useCallback(async (e: React.DragEvent) => {
         e.preventDefault();
@@ -135,7 +169,49 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
     }, [handleFile]);
 
     return (
-        <div className="w-full max-w-xl mx-auto">
+        <div className="w-full max-w-xl mx-auto space-y-4">
+            {/* 提示词设置按钮 */}
+            <div className="flex justify-end">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPromptEditor(!showPromptEditor)}
+                    className="text-gray-500 hover:text-gray-700"
+                >
+                    ⚙️ {showPromptEditor ? '收起设置' : 'AI提示词设置'}
+                </Button>
+            </div>
+
+            {/* 提示词编辑器 */}
+            {showPromptEditor && (
+                <div className="border rounded-lg p-4 bg-gray-50 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-gray-700">自定义AI提示词</label>
+                        <Button variant="ghost" size="sm" onClick={resetPrompt}>
+                            重置为默认
+                        </Button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                        提示词会影响AI如何解析和理解题目。JSON格式要求是固定的，这里只修改附加说明部分。
+                    </p>
+                    <textarea
+                        value={customPrompt}
+                        onChange={(e) => setCustomPrompt(e.target.value)}
+                        className="w-full h-40 p-3 text-sm border rounded-md font-mono resize-y"
+                        placeholder="输入自定义提示词..."
+                    />
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setShowPromptEditor(false)}>
+                            取消
+                        </Button>
+                        <Button size="sm" onClick={savePrompt}>
+                            保存提示词
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* 上传区域 */}
             <div
                 className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
                     }`}

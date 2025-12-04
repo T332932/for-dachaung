@@ -26,6 +26,19 @@ from utils.deps import get_current_user, require_role
 router = APIRouter(tags=["teacher"])
 export_service = ExportService()
 
+# 默认提示词（可被前端修改）
+DEFAULT_PROMPT = """重要：questionText 只包含题干和选项，不要包含任何答案或解析；答案与解题步骤只放在 answer 字段。
+SVG 生成要求：
+- 使用 <line>, <circle>, <ellipse>, <path>, <text> 标签
+- 虚线用 stroke-dasharray="5,5"
+- 文本标注用 <text> 标签，内容为数学符号
+- viewBox="0 0 400 400"，坐标准确"""
+
+
+@router.get("/prompt/default")
+async def get_default_prompt():
+    """获取默认的提示词"""
+    return {"prompt": DEFAULT_PROMPT}
 
 @router.post("/questions/analyze", response_model=QuestionAnalysisResponse)
 async def analyze_question(
@@ -47,6 +60,7 @@ async def preview_question(
     format: str = Query("json", pattern="^(json|pdf)$"),
     include_answer: bool = Query(True),
     include_explanation: bool = Query(False),
+    custom_prompt: str = Query(None, description="自定义提示词（可选）"),
     ai_service: AIService = Depends(get_ai_service),
     background_tasks: BackgroundTasks = None,
 ):
@@ -54,8 +68,9 @@ async def preview_question(
     单题预览：上传图片 → AI 解析 → 生成 LaTeX，并可选编译 PDF。
     - format=json: 返回解析结果 + latex 文本 + svg 的 PNG base64 预览。
     - format=pdf: 返回编译好的 PDF 文件。
+    - custom_prompt: 自定义提示词（可选）
     """
-    analysis = await ai_service.analyze(file)
+    analysis = await ai_service.analyze(file, custom_prompt=custom_prompt)
     latex, attachments = export_service.build_single_question_latex(
         analysis, include_answer=include_answer, include_explanation=include_explanation
     )

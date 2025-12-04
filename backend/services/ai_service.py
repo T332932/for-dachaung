@@ -69,17 +69,19 @@ class AIService:
         else:
             self.client = None
     
-    async def analyze(self, file: UploadFile):
-        """分析题目图片"""
+    async def analyze(self, file: UploadFile, custom_prompt: str = None):
+        """分析题目图片，支持自定义提示词"""
         if not self.client:
             return self._stub_response(file.filename or "题目")
         
         if self.provider == "gemini":
-            return await self._analyze_with_gemini(file)
+            return await self._analyze_with_gemini(file, custom_prompt)
         elif self.provider == "openai":
-            return await self._analyze_with_openai(file)
+            return await self._analyze_with_openai(file, custom_prompt)
+        else:
+            return self._stub_response(file.filename or "题目")
     
-    async def _analyze_with_gemini(self, file: UploadFile):
+    async def _analyze_with_gemini(self, file: UploadFile, custom_prompt: str = None):
         """使用Gemini分析"""
         file_bytes = await file.read()
         if hasattr(file, "file") and hasattr(file.file, "seek"):
@@ -88,12 +90,12 @@ class AIService:
         mime = mime or "image/png"
         image_part = {"mime_type": mime, "data": file_bytes}
         
-        prompt = self._get_analysis_prompt()
+        prompt = self._get_analysis_prompt(custom_prompt)
         response = self.client.generate_content([prompt, image_part])
         text = response.text or ""
         return self._extract_json(text)
     
-    async def _analyze_with_openai(self, file: UploadFile):
+    async def _analyze_with_openai(self, file: UploadFile, custom_prompt: str = None):
         """使用OpenAI（或兼容API）分析"""
         import base64
         
@@ -112,7 +114,7 @@ class AIService:
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": self._get_analysis_prompt()},
+                        {"type": "text", "text": self._get_analysis_prompt(custom_prompt)},
                         {
                             "type": "image_url",
                             "image_url": {
@@ -128,9 +130,10 @@ class AIService:
         text = response.choices[0].message.content
         return self._extract_json(text)
     
-    def _get_analysis_prompt(self) -> str:
-        """获取分析提示词"""
-        return """请分析这道数学题，按以下 JSON 格式返回：
+    def _get_analysis_prompt(self, custom_prompt: str = None) -> str:
+        """获取分析提示词，支持自定义提示词"""
+        # 固定的JSON格式要求
+        format_requirement = """请分析这道数学题，按以下 JSON 格式返回：
 {
   "questionText": "题目完整文本（Markdown 格式，公式用 LaTeX）",
   "options": ["A. ...", "B. ..."],  // 如果是选择题
@@ -142,13 +145,21 @@ class AIService:
   "questionType": "choice/fillblank/solve/proof",
   "confidence": 0.0-1.0
 }
-重要：questionText 只包含题干和选项，不要包含任何答案或解析；答案与解题步骤只放在 answer 字段。
+仅输出 JSON，不要额外说明。"""
+        
+        # 默认的附加说明
+        default_instructions = """重要：questionText 只包含题干和选项，不要包含任何答案或解析；答案与解题步骤只放在 answer 字段。
 SVG 生成要求：
 - 使用 <line>, <circle>, <ellipse>, <path>, <text> 标签
 - 虚线用 stroke-dasharray="5,5"
 - 文本标注用 <text> 标签，内容为数学符号
-- viewBox="0 0 400 400"，坐标准确
-仅输出 JSON，不要额外说明。"""
+- viewBox="0 0 400 400"，坐标准确"""
+        
+        # 如果有自定义提示词，用它替换默认说明
+        if custom_prompt:
+            return f"{format_requirement}\n\n{custom_prompt}"
+        else:
+            return f"{format_requirement}\n\n{default_instructions}"
     
     def _extract_json(self, text: str):
         """从文本中提取JSON"""

@@ -117,7 +117,7 @@ export const questionApi = {
   },
 
   // 上传并生成预览（解析 + latex + svg png）
-  preview: async (file: File, opts?: { includeAnswer?: boolean; includeExplanation?: boolean }): Promise<{
+  preview: async (file: File, opts?: { includeAnswer?: boolean; includeExplanation?: boolean; customPrompt?: string }): Promise<{
     analysis?: Record<string, unknown>;
     latex?: string;
     svgPng?: string | null;
@@ -132,6 +132,7 @@ export const questionApi = {
           format: 'json',
           include_answer: opts?.includeAnswer ?? true,
           include_explanation: opts?.includeExplanation ?? false,
+          custom_prompt: opts?.customPrompt ?? undefined,
         },
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -176,6 +177,12 @@ export const questionApi = {
   // 获取题目列表
   list: async (params?: Record<string, unknown>) => {
     const response = await api.get('/api/teacher/questions', { params });
+    return response.data;
+  },
+
+  // 获取默认提示词
+  getDefaultPrompt: async (): Promise<{ prompt: string }> => {
+    const response = await api.get('/api/teacher/prompt/default');
     return response.data;
   },
 };
