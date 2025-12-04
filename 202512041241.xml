@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400px" height="350px" viewBox="0 0 400 350" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <!-- 样式定义: 定义了所有线条和文字的通用样式 -->
+    <!-- 'stroke'是线条颜色, 'stroke-width'是线条粗细, 'fill="none"'确保图形内部不被填充 -->
+    <style>
+        .solid-line {
+            stroke: black;
+            stroke-width: 1.5;
+            fill: none;
+        }
+        .dashed-line {
+            stroke: black;
+            stroke-width: 1.5;
+            fill: none;
+            stroke-dasharray: 6, 4; /* 定义虚线样式：画6个单位，空4个单位 */
+        }
+        .label {
+            font-family: Arial, sans-serif;
+            font-size: 20px;
+            text-anchor: middle; /* 文字水平居中对齐 */
+            dominant-baseline: middle; /* 文字垂直居中对齐 */
+        }
+    </style>
+    <!-- 坐标点定义 (这里为了方便阅读，我们在注释中定义，实际在绘图时直接使用) -->
+    <!-- P: (200, 50) -->
+    <!-- A: (50, 200) -->
+    <!-- B: (120, 280) -->
+    <!-- C: (300, 250) -->
+    <!-- D: (350, 180) -->
+    <!-- E (PD中点): ( (200+350)/2, (50+180)/2 ) = (275, 115) -->
+    <!-- 绘制图形线条 -->
+    <g id="lines">
+        <!-- 1. 绘制被遮挡的虚线 -->
+        <line x1="50" y1="200" x2="350" y2="180" class="dashed-line" /> <!-- A -- D -->
+        <!-- 2. 绘制可见的实线 -->
+        <line x1="50" y1="200" x2="120" y2="280" class="solid-line" /> <!-- A -- B -->
+        <line x1="120" y1="280" x2="300" y2="250" class="solid-line" /> <!-- B -- C -->
+        <line x1="300" y1="250" x2="350" y2="180" class="solid-line" /> <!-- C -- D -->
+        <line x1="200" y1="50" x2="50" y2="200" class="solid-line" />   <!-- P -- A -->
+        <line x1="200" y1="50" x2="120" y2="280" class="solid-line" />  <!-- P -- B -->
+        <line x1="200" y1="50" x2="300" y2="250" class="solid-line" />  <!-- P -- C -->
+        <line x1="200" y1="50" x2="350" y2="180" class="solid-line" />  <!-- P -- D -->
+        <!-- 3. 绘制辅助线 CE -->
+        <line x1="300" y1="250" x2="275" y2="115" class="solid-line" /> <!-- C -- E -->
+    </g>
+    <!-- 标注所有点 -->
+    <g id="labels" class="label">
+        <!-- 使用 dx 和 dy 微调标签位置，使其不与点和线重叠 -->
+        <text x="200" y="50" dy="-10">P</text>
+        <text x="50" y="200" dx="-10">A</text>
+        <text x="120" y="280" dy="12">B</text>
+        <text x="300" y="250" dx="12">C</text>
+        <text x="350" y="180" dx="12">D</text>
+        <text x="275" y="115" dx="12">E</text>
+    </g>
+</svg>

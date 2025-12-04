@@ -1,0 +1,14 @@
+fastapi==0.115.2
+uvicorn[standard]==0.30.6
+pydantic==2.8.2
+pydantic-settings==2.4.0
+python-multipart==0.0.9
+aiofiles==24.1.0
+SQLAlchemy==2.0.34
+# Optional: google-generativeai for Gemini 调用
+# google-generativeai==0.7.2
+# Optional: pgvector, SQLAlchemy, redis 等后续增加
+psycopg2-binary==2.9.9
+python-docx==1.1.2
+passlib[bcrypt]==1.7.4
+python-jose==3.3.0

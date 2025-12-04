@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://zujuan:zujuan@db:5432/zujuan
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=gemini-2.5-pro
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: zujuan
+      POSTGRES_PASSWORD: zujuan
+      POSTGRES_DB: zujuan
+      # 持久化需要挂卷已设置
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # web:
+  #   build: ./web
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NEXT_PUBLIC_API_URL=http://localhost:8000
+  #   depends_on:
+  #     - api
+
+volumes:
+  pgdata:
