@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { questionApi, QuestionPayload } from '@/lib/api-client';
+import { questionApi } from '@/lib/api-client';
+import { QuestionAnalysisResult } from './QuestionUploader';
 
 interface QuestionEditorProps {
-    initialData: QuestionPayload;
-    onSave: (savedData: QuestionPayload) => void;
+    initialData: QuestionAnalysisResult;
+    onSave: (savedData: QuestionAnalysisResult) => void;
     onCancel: () => void;
 }
 
 export function QuestionEditor({ initialData, onSave, onCancel }: QuestionEditorProps) {
-    const [formData, setFormData] = useState<QuestionPayload>(initialData);
+    const [formData, setFormData] = useState<QuestionAnalysisResult>(initialData);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -22,8 +23,9 @@ export function QuestionEditor({ initialData, onSave, onCancel }: QuestionEditor
     const handleSubmit = async () => {
         setIsSaving(true);
         try {
-            const result = await questionApi.create(formData);
-            onSave(result);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const result = await questionApi.create(formData as any);
+            onSave(formData);
         } catch (error) {
             console.error('Save failed:', error);
             alert('保存失败');
