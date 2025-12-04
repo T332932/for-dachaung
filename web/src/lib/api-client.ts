@@ -50,7 +50,7 @@ export const api = axios.create({
     'Content-Type': 'application/json',
     ...(API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {}),
   },
-  timeout: 30000, // 30秒超时，AI分析可能需要较长时间
+  timeout: 300000, // 5分钟超时，Gemini 2.5 Pro分析可能需要较长时间
 });
 
 // 添加响应拦截器，统一处理错误
@@ -74,7 +74,7 @@ api.interceptors.response.use(
           /* ignore */
         }
       }
-      
+
       if (status === 400) {
         error.userMessage = data?.detail || '请求参数错误';
       } else if (status === 401) {
@@ -97,7 +97,7 @@ api.interceptors.response.use(
     } else {
       error.userMessage = '请求失败，请重试';
     }
-    
+
     return Promise.reject(error);
   }
 );
