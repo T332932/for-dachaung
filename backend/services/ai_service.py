@@ -152,18 +152,40 @@ SVG 生成要求：
     
     def _extract_json(self, text: str):
         """从文本中提取JSON"""
-        cleaned = text
-        if "```json" in cleaned:
-            cleaned = cleaned.split("```json", 1)[1].split("```", 1)[0]
-        elif "```" in cleaned:
-            cleaned = cleaned.split("```", 1)[1].split("```", 1)[0]
-        cleaned = cleaned.strip()
+        import re
         
+        cleaned = text.strip()
+        
+        # 尝试多种方式提取JSON
+        # 1. 处理 ```json ... ``` 格式
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json", 1)[1].split("```", 1)[0].strip()
+        elif "```" in cleaned:
+            # 可能是 ``` 包裹的代码块
+            parts = cleaned.split("```")
+            if len(parts) >= 2:
+                cleaned = parts[1].strip()
+                # 如果第一行是语言标识，去掉它
+                if cleaned.startswith("json"):
+                    cleaned = cleaned[4:].strip()
+        
+        # 2. 尝试找到JSON对象 { ... }
+        if not cleaned.startswith("{"):
+            match = re.search(r'\{[\s\S]*\}', cleaned)
+            if match:
+                cleaned = match.group(0)
+        
+        # 3. 尝试解析
         try:
             data = json.loads(cleaned)
-        except Exception:
+            # 解析成功，进行后处理
+            if isinstance(data, dict):
+                return self._post_process_json(data)
+            return data
+        except json.JSONDecodeError as e:
+            # 解析失败，返回原始文本作为questionText
             return {
-                "questionText": cleaned or "未能解析 JSON，请检查模型输出。",
+                "questionText": text or "未能解析 JSON，请检查模型输出。",
                 "options": None,
                 "answer": "",
                 "hasGeometry": False,
@@ -172,8 +194,10 @@ SVG 生成要求：
                 "difficulty": None,
                 "questionType": None,
                 "confidence": None,
+                "_parseError": str(e),
             }
-        # 简单后处理：若答案误出现在 questionText，尝试分离
+    
+    def _post_process_json(self, data: dict) -> dict:
         if isinstance(data, dict):
             qt = data.get("questionText") or ""
             ans = data.get("answer") or ""
