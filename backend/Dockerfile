@@ -20,6 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ARG用于打破缓存，每次更新时传入不同值
+ARG CACHE_BUST=1
 COPY . .
 
 EXPOSE 8000
