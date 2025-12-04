@@ -5,10 +5,9 @@ pydantic-settings==2.4.0
 python-multipart==0.0.9
 aiofiles==24.1.0
 SQLAlchemy==2.0.34
-# Optional: google-generativeai for Gemini 调用
-openai>=1.0.0 # for Gemini 调用
-# google-generativeai==0.7.2
-# Optional: pgvector, SQLAlchemy, redis 等后续增加
+alembic==1.17.2
+openai>=1.0.0
+google-generativeai>=0.7.0
 psycopg2-binary==2.9.9
 python-docx==1.1.2
 passlib[bcrypt]==1.7.4
