@@ -15,7 +15,7 @@ export const questionApi = {
   analyze: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post('/questions/analyze', formData, {
+    const response = await api.post('/api/teacher/questions/analyze', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -25,13 +25,13 @@ export const questionApi = {
 
   // 保存题目
   create: async (data: any) => {
-    const response = await api.post('/questions', data);
+    const response = await api.post('/api/teacher/questions', data);
     return response.data;
   },
 
   // 获取题目列表
   list: async (params: any) => {
-    const response = await api.get('/questions', { params });
+    const response = await api.get('/api/teacher/questions', { params });
     return response.data;
   },
 };
@@ -39,17 +39,18 @@ export const questionApi = {
 // 试卷相关 API
 export const paperApi = {
   create: async (data: any) => {
-    const response = await api.post('/papers', data);
+    const response = await api.post('/api/teacher/papers', data);
     return response.data;
   },
 
   list: async (params: any) => {
-    const response = await api.get('/papers', { params });
+    const response = await api.get('/api/teacher/papers', { params });
     return response.data;
   },
 
   get: async (id: string) => {
-    const response = await api.get(`/papers/${id}`);
+    const response = await api.get(`/api/teacher/papers/${id}`);
     return response.data;
   },
 };
+
