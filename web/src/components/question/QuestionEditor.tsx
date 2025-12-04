@@ -17,6 +17,14 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
     const [isDownloading, setIsDownloading] = useState(false);
 
     const handleSubmit = async () => {
+        if (!initialData.questionText?.trim()) {
+            alert('题目内容不能为空，请重新上传');
+            return;
+        }
+        if (!initialData.answer?.trim()) {
+            alert('答案不能为空，请重新上传');
+            return;
+        }
         setIsSaving(true);
         try {
             // 将解析结果直接入库，不提供前端编辑
@@ -52,7 +60,10 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
         }
         setIsDownloading(true);
         try {
-            const blob = await questionApi.previewPdf(file, { includeAnswer: true, includeExplanation: false });
+            const blob = await questionApi.previewPdf(file, { includeAnswer: true, includeExplanation: false }) as any;
+            if (!(blob instanceof Blob) || blob.size === 0) {
+                throw new Error('PDF生成失败：返回的数据无效');
+            }
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
@@ -61,9 +72,21 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
-        } catch (error) {
+        } catch (error: any) {
             console.error('PDF preview failed:', error);
-            alert('PDF 预览失败，请确认后端已安装 pdflatex');
+            // 尝试读取后端错误
+            const respData = error?.response?.data;
+            if (respData instanceof Blob) {
+                try {
+                    const text = await respData.text();
+                    const json = JSON.parse(text);
+                    alert(`PDF 预览失败：${json.detail || json.error || '未知错误'}`);
+                } catch {
+                    alert('PDF 预览失败，请确认后端已安装 pdflatex');
+                }
+            } else {
+                alert('PDF 预览失败，请确认后端已安装 pdflatex');
+            }
         } finally {
             setIsDownloading(false);
         }
@@ -111,7 +134,7 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
                 </div>
 
                 {/* 选项（选择题） */}
-                {initialData?.options && initialData.options.length > 0 && (
+                {initialData?.options && Array.isArray(initialData.options) && initialData.options.length > 0 && (
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">🔘 选项</label>
                         <div className="space-y-2 p-3 border rounded-md bg-gray-50">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { QuestionUploader, QuestionAnalysisResult } from '@/components/question/QuestionUploader';
 import { QuestionEditor } from '@/components/question/QuestionEditor';
 
@@ -18,13 +18,18 @@ export default function Home() {
   const handleSave = (savedData: QuestionAnalysisResult) => {
     console.log('Saved:', savedData);
     setStep('success');
-    // 3秒后返回上传页
-    setTimeout(() => {
-      setStep('upload');
-      setCurrentQuestion(null);
-      setCurrentFile(null);
-    }, 3000);
   };
+
+  useEffect(() => {
+    if (step === 'success') {
+      const timer = setTimeout(() => {
+        setStep('upload');
+        setCurrentQuestion(null);
+        setCurrentFile(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

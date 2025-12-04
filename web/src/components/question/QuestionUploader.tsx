@@ -27,7 +27,11 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
         if (e.type === 'dragenter' || e.type === 'dragover') {
             setDragActive(true);
         } else if (e.type === 'dragleave') {
-            setDragActive(false);
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const { clientX: x, clientY: y } = e;
+            if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+                setDragActive(false);
+            }
         }
     }, []);
 
@@ -40,6 +44,9 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
                 svgPng: result?.svgPng || null,
                 latex: result?.latex,
             };
+            if (!merged.questionText?.trim() && !merged.answer?.trim()) {
+                throw new Error('AI 返回数据不完整');
+            }
             onAnalyzed(merged, file);
         } catch (error) {
             console.error('Analysis failed:', error);
@@ -63,6 +70,8 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
         e.preventDefault();
         if (e.target.files && e.target.files[0]) {
             await handleFile(e.target.files[0]);
+            // 允许再次选择同一文件
+            e.target.value = '';
         }
     };
 
