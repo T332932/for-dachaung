@@ -201,19 +201,19 @@ SVG 生成要求：
                     return self._post_process_json(data)
                 return data
             except Exception as e:
-            # 解析失败，返回原始文本作为questionText
-            return {
-                "questionText": text or "未能解析 JSON，请检查模型输出。",
-                "options": None,
-                "answer": "",
-                "hasGeometry": False,
-                "geometrySvg": None,
-                "knowledgePoints": [],
-                "difficulty": None,
-                "questionType": None,
-                "confidence": None,
-                "_parseError": str(e),
-            }
+                # 解析失败，返回原始文本作为questionText
+                return {
+                    "questionText": text or "未能解析 JSON，请检查模型输出。",
+                    "options": None,
+                    "answer": "",
+                    "hasGeometry": False,
+                    "geometrySvg": None,
+                    "knowledgePoints": [],
+                    "difficulty": None,
+                    "questionType": None,
+                    "confidence": None,
+                    "_parseError": str(e),
+                }
     
     def _post_process_json(self, data: dict) -> dict:
         if isinstance(data, dict):
