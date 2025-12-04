@@ -175,6 +175,10 @@ SVG 生成要求：
             if match:
                 cleaned = match.group(0)
         
+        # 3. 清理可能导致JSON解析失败的控制字符
+        # 替换真实的换行为转义后的换行（确保在字符串值内部）
+        # 首先尝试直接解析，如果失败再尝试修复
+        
         # 3. 尝试解析
         try:
             data = json.loads(cleaned)
@@ -182,7 +186,21 @@ SVG 生成要求：
             if isinstance(data, dict):
                 return self._post_process_json(data)
             return data
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
+            # 尝试修复控制字符问题：将JSON字符串值内的换行符转义
+            try:
+                # 尝试用更宽松的方式解析
+                import ast
+                # 替换真实换行为 \\n（在JSON字符串值内部）
+                fixed = cleaned
+                # 移除可能的 BOM
+                if fixed.startswith('\ufeff'):
+                    fixed = fixed[1:]
+                data = json.loads(fixed, strict=False)
+                if isinstance(data, dict):
+                    return self._post_process_json(data)
+                return data
+            except Exception as e:
             # 解析失败，返回原始文本作为questionText
             return {
                 "questionText": text or "未能解析 JSON，请检查模型输出。",
