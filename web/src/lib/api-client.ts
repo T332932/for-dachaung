@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_TOKEN = process.env.NEXT_PUBLIC_API_TOKEN;
 
 export interface QuestionPayload {
   questionText: string;
@@ -41,6 +42,7 @@ export const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
+    ...(API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {}),
   },
 });
 
@@ -56,6 +58,49 @@ export const questionApi = {
       },
     });
     return response.data as unknown;
+  },
+
+  // 上传并生成预览（解析 + latex + svg png）
+  preview: async (file: File, opts?: { includeAnswer?: boolean; includeExplanation?: boolean }) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post(
+      '/api/teacher/questions/preview',
+      formData,
+      {
+        params: {
+          format: 'json',
+          include_answer: opts?.includeAnswer ?? true,
+          include_explanation: opts?.includeExplanation ?? false,
+        },
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data as unknown;
+  },
+
+  // 下载单题 PDF 预览
+  previewPdf: async (file: File, opts?: { includeAnswer?: boolean; includeExplanation?: boolean }) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post(
+      '/api/teacher/questions/preview',
+      formData,
+      {
+        params: {
+          format: 'pdf',
+          include_answer: opts?.includeAnswer ?? true,
+          include_explanation: opts?.includeExplanation ?? false,
+        },
+        responseType: 'blob',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data as Blob;
   },
 
   // 保存题目

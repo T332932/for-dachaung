@@ -7,12 +7,14 @@ import { QuestionAnalysisResult } from './QuestionUploader';
 
 interface QuestionEditorProps {
     initialData: QuestionAnalysisResult;
+    file: File | null;
     onSave: (savedData: QuestionAnalysisResult) => void;
     onCancel: () => void;
 }
 
-export function QuestionEditor({ initialData, onSave, onCancel }: QuestionEditorProps) {
+export function QuestionEditor({ initialData, file, onSave, onCancel }: QuestionEditorProps) {
     const [isSaving, setIsSaving] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const handleSubmit = async () => {
         setIsSaving(true);
@@ -43,11 +45,38 @@ export function QuestionEditor({ initialData, onSave, onCancel }: QuestionEditor
         }
     };
 
+    const handleDownloadPdf = async () => {
+        if (!file) {
+            alert('缺少原始文件，无法生成 PDF 预览，请重新上传。');
+            return;
+        }
+        setIsDownloading(true);
+        try {
+            const blob = await questionApi.previewPdf(file, { includeAnswer: true, includeExplanation: false });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'question_preview.pdf';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('PDF preview failed:', error);
+            alert('PDF 预览失败，请确认后端已安装 pdflatex');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     return (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex justify-between items-center border-b pb-4">
                 <h3 className="text-lg font-semibold">题目预览</h3>
                 <div className="space-x-2">
+                    <Button variant="outline" onClick={handleDownloadPdf} disabled={isDownloading || !file}>
+                        {isDownloading ? '生成中...' : '下载 PDF 预览'}
+                    </Button>
                     <Button variant="ghost" onClick={onCancel}>重新上传</Button>
                     <Button onClick={handleSubmit} disabled={isSaving}>
                         {isSaving ? '入库中...' : '确认入库'}
@@ -57,13 +86,19 @@ export function QuestionEditor({ initialData, onSave, onCancel }: QuestionEditor
 
             <div className="grid grid-cols-1 gap-6">
                 {/* 几何图形预览 */}
-                {initialData?.hasGeometry && initialData?.geometrySvg && (
+                {initialData?.hasGeometry && (initialData?.svgPng || initialData?.geometrySvg) && (
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">📐 几何图形 (AI生成)</label>
-                        <div
-                            className="border rounded-md p-4 bg-white flex justify-center overflow-auto max-h-[320px]"
-                            dangerouslySetInnerHTML={{ __html: initialData.geometrySvg }}
-                        />
+                        <div className="border rounded-md p-4 bg-white flex justify-center overflow-auto max-h-[320px]">
+                            {initialData.svgPng ? (
+                                <img src={initialData.svgPng} alt="geometry preview" className="max-h-[280px]" />
+                            ) : (
+                                <div
+                                    className="w-full"
+                                    dangerouslySetInnerHTML={{ __html: initialData.geometrySvg || '' }}
+                                />
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -124,6 +159,16 @@ export function QuestionEditor({ initialData, onSave, onCancel }: QuestionEditor
                         </div>
                     </div>
                 </div>
+
+                {/* LaTeX 预览 */}
+                {initialData?.latex && (
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">🧪 LaTeX 源码（单题）</label>
+                        <pre className="w-full p-3 border rounded-md bg-gray-50 text-xs overflow-auto max-h-[240px] whitespace-pre-wrap">
+                            {initialData.latex}
+                        </pre>
+                    </div>
+                )}
             </div>
         </div>
     );

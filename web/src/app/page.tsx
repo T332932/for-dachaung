@@ -7,9 +7,11 @@ import { QuestionEditor } from '@/components/question/QuestionEditor';
 export default function Home() {
   const [step, setStep] = useState<'upload' | 'edit' | 'success'>('upload');
   const [currentQuestion, setCurrentQuestion] = useState<QuestionAnalysisResult | null>(null);
+  const [currentFile, setCurrentFile] = useState<File | null>(null);
 
-  const handleAnalyzed = (data: QuestionAnalysisResult) => {
+  const handleAnalyzed = (data: QuestionAnalysisResult, file: File) => {
     setCurrentQuestion(data);
+    setCurrentFile(file);
     setStep('edit');
   };
 
@@ -20,6 +22,7 @@ export default function Home() {
     setTimeout(() => {
       setStep('upload');
       setCurrentQuestion(null);
+      setCurrentFile(null);
     }, 3000);
   };
 
@@ -44,8 +47,13 @@ export default function Home() {
         {step === 'edit' && currentQuestion && (
           <QuestionEditor
             initialData={currentQuestion}
+            file={currentFile}
             onSave={handleSave}
-            onCancel={() => setStep('upload')}
+            onCancel={() => {
+              setStep('upload');
+              setCurrentQuestion(null);
+              setCurrentFile(null);
+            }}
           />
         )}
 

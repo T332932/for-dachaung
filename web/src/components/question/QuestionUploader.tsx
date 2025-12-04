@@ -9,13 +9,15 @@ export interface QuestionAnalysisResult {
     answer?: string;
     hasGeometry?: boolean;
     geometrySvg?: string | null;
+    svgPng?: string | null;
+    latex?: string;
     knowledgePoints?: string[];
     difficulty?: string | null;
     questionType?: string | null;
     confidence?: number | null;
 }
 
-export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAnalysisResult) => void }) {
+export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAnalysisResult, file: File) => void }) {
     const [isUploading, setIsUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
 
@@ -32,8 +34,13 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
     const handleFile = useCallback(async (file: File) => {
         setIsUploading(true);
         try {
-            const result = await questionApi.analyze(file) as QuestionAnalysisResult;
-            onAnalyzed(result);
+            const result = await questionApi.preview(file) as any;
+            const merged: QuestionAnalysisResult = {
+                ...(result?.analysis || {}),
+                svgPng: result?.svgPng || null,
+                latex: result?.latex,
+            };
+            onAnalyzed(merged, file);
         } catch (error) {
             console.error('Analysis failed:', error);
             alert('题目识别失败，请重试');
