@@ -41,6 +41,101 @@ async def analyze_question(
     return await ai_service.analyze(file)
 
 
+@router.post("/questions/preview")
+async def preview_question(
+    file: UploadFile = File(...),
+    format: str = Query("json", pattern="^(json|pdf)$"),
+    include_answer: bool = Query(True),
+    include_explanation: bool = Query(False),
+    ai_service: AIService = Depends(get_ai_service),
+    background_tasks: BackgroundTasks = None,
+):
+    """
+    单题预览：上传图片 → AI 解析 → 生成 LaTeX，并可选编译 PDF。
+    - format=json: 返回解析结果 + latex 文本 + svg 的 PNG base64 预览。
+    - format=pdf: 返回编译好的 PDF 文件。
+    """
+    analysis = await ai_service.analyze(file)
+    latex, attachments = export_service.build_single_question_latex(
+        analysis, include_answer=include_answer, include_explanation=include_explanation
+    )
+
+    if format == "pdf":
+        ok, out, log = export_service.compile_pdf(latex, attachments=attachments)
+        if ok:
+            file_path = Path(out)
+            bg = background_tasks or BackgroundTasks()
+            bg.add_task(export_service.cleanup_file, file_path)
+            return FileResponse(
+                file_path,
+                media_type="application/pdf",
+                filename="question_preview.pdf",
+                background=bg,
+            )
+        raise HTTPException(status_code=500, detail={"error": "pdf_preview_failed", "detail": out, "log": log, "latex": latex})
+
+    # 默认 json：返回结构化数据 + latex + PNG 预览（如可用）
+    svg_png = export_service.svg_to_png_base64(analysis.get("geometrySvg")) if analysis.get("hasGeometry") else None
+    return {
+        "analysis": analysis,
+        "latex": latex,
+        "svgPng": svg_png,
+    }
+
+
+@router.post("/questions/ingest", response_model=QuestionCreateResponse)
+async def ingest_and_create_question(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    ai_service: AIService = Depends(get_ai_service),
+    current_user: orm.User = Depends(require_role(["teacher", "admin"])),
+):
+    """
+    一步完成：上传图片 → AI 解析 → 清洗 → 入库。
+    返回入库后的题目 ID 和入库时的 payload。
+    """
+    analysis = await ai_service.analyze(file)
+    payload = QuestionCreateRequest(
+        questionText=analysis.get("questionText") or "",
+        options=analysis.get("options"),
+        answer=analysis.get("answer") or "",
+        explanation=None,
+        hasGeometry=bool(analysis.get("hasGeometry")),
+        geometrySvg=analysis.get("geometrySvg"),
+        geometryTikz=None,
+        knowledgePoints=analysis.get("knowledgePoints") or [],
+        difficulty=analysis.get("difficulty") or "medium",
+        questionType=analysis.get("questionType") or "solve",
+        source=analysis.get("source") or "ai_upload",
+        year=analysis.get("year"),
+        aiGenerated=True,
+    )
+    try:
+        q = orm.Question(
+            question_text=payload.questionText,
+            options=payload.options,
+            answer=payload.answer,
+            explanation=payload.explanation,
+            has_geometry=payload.hasGeometry,
+            geometry_svg=payload.geometrySvg,
+            geometry_tikz=payload.geometryTikz,
+            knowledge_points=payload.knowledgePoints,
+            difficulty=payload.difficulty,
+            question_type=payload.questionType,
+            source=payload.source,
+            year=payload.year,
+            ai_generated=payload.aiGenerated,
+            created_by=current_user.id if current_user else None,
+        )
+        db.add(q)
+        db.commit()
+        db.refresh(q)
+        return QuestionCreateResponse(id=q.id, created=True, payload=payload)
+    except Exception:
+        db.rollback()
+        raise
+
+
 @router.post("/questions", response_model=QuestionCreateResponse)
 async def create_question(
     payload: QuestionCreateRequest,
