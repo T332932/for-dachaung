@@ -2,6 +2,41 @@ import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export interface QuestionPayload {
+  questionText: string;
+  options?: string[] | null;
+  answer: string;
+  explanation?: string | null;
+  hasGeometry: boolean;
+  geometrySvg?: string | null;
+  geometryTikz?: string | null;
+  knowledgePoints?: string[];
+  difficulty?: string;
+  questionType?: string;
+  source?: string | null;
+  year?: number | null;
+  aiGenerated?: boolean;
+}
+
+export interface PaperQuestionInput {
+  questionId: string;
+  order: number;
+  score: number;
+  customLabel?: string;
+}
+
+export interface PaperPayload {
+  title: string;
+  description?: string;
+  templateType: string;
+  questions: PaperQuestionInput[];
+  totalScore?: number;
+  timeLimit?: number;
+  tags?: string[];
+  subject?: string;
+  gradeLevel?: string;
+}
+
 export const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -20,17 +55,17 @@ export const questionApi = {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data;
+    return response.data as unknown;
   },
 
   // 保存题目
-  create: async (data: any) => {
+  create: async (data: QuestionPayload) => {
     const response = await api.post('/api/teacher/questions', data);
     return response.data;
   },
 
   // 获取题目列表
-  list: async (params: any) => {
+  list: async (params?: Record<string, unknown>) => {
     const response = await api.get('/api/teacher/questions', { params });
     return response.data;
   },
@@ -38,12 +73,12 @@ export const questionApi = {
 
 // 试卷相关 API
 export const paperApi = {
-  create: async (data: any) => {
+  create: async (data: PaperPayload) => {
     const response = await api.post('/api/teacher/papers', data);
     return response.data;
   },
 
-  list: async (params: any) => {
+  list: async (params?: Record<string, unknown>) => {
     const response = await api.get('/api/teacher/papers', { params });
     return response.data;
   },
@@ -53,4 +88,3 @@ export const paperApi = {
     return response.data;
   },
 };
-

@@ -3,7 +3,19 @@
 import { useState, useCallback } from 'react';
 import { questionApi } from '@/lib/api-client';
 
-export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: any) => void }) {
+export interface QuestionAnalysisResult {
+    questionText?: string;
+    options?: string[] | null;
+    answer?: string;
+    hasGeometry?: boolean;
+    geometrySvg?: string | null;
+    knowledgePoints?: string[];
+    difficulty?: string | null;
+    questionType?: string | null;
+    confidence?: number | null;
+}
+
+export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAnalysisResult) => void }) {
     const [isUploading, setIsUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
 
@@ -17,24 +29,7 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: any) => vo
         }
     }, []);
 
-    const handleDrop = useCallback(async (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragActive(false);
-
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            await handleFile(e.dataTransfer.files[0]);
-        }
-    }, []);
-
-    const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        e.preventDefault();
-        if (e.target.files && e.target.files[0]) {
-            await handleFile(e.target.files[0]);
-        }
-    };
-
-    const handleFile = async (file: File) => {
+    const handleFile = useCallback(async (file: File) => {
         setIsUploading(true);
         try {
             const result = await questionApi.analyze(file);
@@ -44,6 +39,23 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: any) => vo
             alert('题目识别失败，请重试');
         } finally {
             setIsUploading(false);
+        }
+    }, [onAnalyzed]);
+
+    const handleDrop = useCallback(async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragActive(false);
+
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            await handleFile(e.dataTransfer.files[0]);
+        }
+    }, [handleFile]);
+
+    const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        e.preventDefault();
+        if (e.target.files && e.target.files[0]) {
+            await handleFile(e.target.files[0]);
         }
     };
 

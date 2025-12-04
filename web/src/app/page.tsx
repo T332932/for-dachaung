@@ -1,19 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { QuestionUploader } from '@/components/question/QuestionUploader';
+import { QuestionUploader, QuestionAnalysisResult } from '@/components/question/QuestionUploader';
 import { QuestionEditor } from '@/components/question/QuestionEditor';
 
 export default function Home() {
   const [step, setStep] = useState<'upload' | 'edit' | 'success'>('upload');
-  const [currentQuestion, setCurrentQuestion] = useState<any>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<QuestionAnalysisResult | null>(null);
 
-  const handleAnalyzed = (data: any) => {
+  const handleAnalyzed = (data: QuestionAnalysisResult) => {
     setCurrentQuestion(data);
     setStep('edit');
   };
 
-  const handleSave = (savedData: any) => {
+  const handleSave = (savedData: QuestionAnalysisResult) => {
     console.log('Saved:', savedData);
     setStep('success');
     // 3秒后返回上传页

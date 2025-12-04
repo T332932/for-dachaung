@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { questionApi } from '@/lib/api-client';
+import { questionApi, QuestionPayload } from '@/lib/api-client';
 
 interface QuestionEditorProps {
-    initialData: any;
-    onSave: (savedData: any) => void;
+    initialData: QuestionPayload;
+    onSave: (savedData: QuestionPayload) => void;
     onCancel: () => void;
 }
 
 export function QuestionEditor({ initialData, onSave, onCancel }: QuestionEditorProps) {
-    const [formData, setFormData] = useState(initialData);
+    const [formData, setFormData] = useState<QuestionPayload>(initialData);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
