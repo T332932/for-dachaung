@@ -139,6 +139,7 @@ class AIService:
   "questionType": "choice/fillblank/solve/proof",
   "confidence": 0.0-1.0
 }
+重要：questionText 只包含题干和选项，不要包含任何答案或解析；答案与解题步骤只放在 answer 字段。
 SVG 生成要求：
 - 使用 <line>, <circle>, <ellipse>, <path>, <text> 标签
 - 虚线用 stroke-dasharray="5,5"
@@ -156,7 +157,7 @@ SVG 生成要求：
         cleaned = cleaned.strip()
         
         try:
-            return json.loads(cleaned)
+            data = json.loads(cleaned)
         except Exception:
             return {
                 "questionText": cleaned or "未能解析 JSON，请检查模型输出。",
@@ -169,6 +170,23 @@ SVG 生成要求：
                 "questionType": None,
                 "confidence": None,
             }
+        # 简单后处理：若答案误出现在 questionText，尝试分离
+        if isinstance(data, dict):
+            qt = data.get("questionText") or ""
+            ans = data.get("answer") or ""
+            lower_qt = qt.lower()
+            # 常见中文/英文提示词
+            split_tokens = ["答案：", "参考答案", "解答：", "解析：", "solution", "answer:"]
+            for token in split_tokens:
+                if token.lower() in lower_qt:
+                    idx = lower_qt.index(token.lower())
+                    ans_part = qt[idx:]
+                    data["questionText"] = qt[:idx].strip()
+                    # 将分离出来的内容追加到 answer
+                    if ans_part and ans_part not in ans:
+                        data["answer"] = (ans + "\n\n" + ans_part).strip()
+                    break
+        return data
     
     def _stub_response(self, filename: str):
         """占位响应（未配置API时）"""
