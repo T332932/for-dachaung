@@ -32,7 +32,7 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
     const handleFile = useCallback(async (file: File) => {
         setIsUploading(true);
         try {
-            const result = await questionApi.analyze(file);
+            const result = await questionApi.analyze(file) as QuestionAnalysisResult;
             onAnalyzed(result);
         } catch (error) {
             console.error('Analysis failed:', error);
