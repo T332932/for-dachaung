@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, JSON, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
@@ -20,8 +20,8 @@ class User(Base):
     email = Column(String(256), unique=True, nullable=True)
     role = Column(String(32), default="teacher")
     password_hash = Column(String(256), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class Question(Base):
@@ -42,8 +42,8 @@ class Question(Base):
     year = Column(Integer, nullable=True)
     ai_generated = Column(Boolean, default=True)
     created_by = Column(String(36), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     reviews = relationship("QuestionReview", back_populates="question", cascade="all, delete-orphan")
 
 
@@ -60,8 +60,8 @@ class Paper(Base):
     subject = Column(String(64), default="math")
     grade_level = Column(String(64), default="high")
     created_by = Column(String(36), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     published_at = Column(DateTime, nullable=True)
 
     questions = relationship("PaperQuestion", back_populates="paper", cascade="all, delete-orphan")

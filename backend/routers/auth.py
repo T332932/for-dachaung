@@ -22,15 +22,19 @@ async def register_user(body: UserCreateRequest, db: Session = Depends(get_db)):
     existing = db.query(orm.User).filter(orm.User.username == body.username).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username already exists")
-    user = orm.User(
-        username=body.username,
-        email=body.email,
-        role=body.role,
-        password_hash=get_password_hash(body.password),
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    try:
+        user = orm.User(
+            username=body.username,
+            email=body.email,
+            role=body.role,
+            password_hash=get_password_hash(body.password),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    except Exception:
+        db.rollback()
+        raise
     return UserView.model_validate(user)
 
 

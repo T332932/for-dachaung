@@ -117,9 +117,10 @@ class ExportService:
                 log = proc.stdout + "\n" + proc.stderr
                 pdf_file = tmp_path / "paper.pdf"
                 if proc.returncode == 0 and pdf_file.exists():
-                    # 保留文件到一个可返回的临时路径
-                    out_file = Path(tempfile.mktemp(suffix=".pdf"))
-                    out_file.write_bytes(pdf_file.read_bytes())
+                    # 安全创建临时文件保存结果
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_out:
+                        tmp_out.write(pdf_file.read_bytes())
+                        out_file = Path(tmp_out.name)
                     return True, out_file, log
                 return False, log or "pdflatex failed", log
         except FileNotFoundError as exc:
@@ -161,15 +162,17 @@ class ExportService:
                     svg_result = self._svg_to_png_attachment(q.geometry_svg)
                     if svg_result:
                         fname, data = svg_result
-                        image_path = Path(tempfile.mktemp(suffix=".png"))
-                        image_path.write_bytes(data)
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as img_tmp:
+                            img_tmp.write(data)
+                            image_path = Path(img_tmp.name)
                         doc.add_picture(image_path, width=None)
                         image_path.unlink(missing_ok=True)
                     else:
                         doc.add_paragraph("[SVG 未内嵌，请前端或后续步骤转换插入]")
 
-            out_file = Path(tempfile.mktemp(suffix=".docx"))
-            doc.save(out_file)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp_out:
+                doc.save(tmp_out.name)
+                out_file = Path(tmp_out.name)
             return True, out_file, ""
         except Exception as exc:  # pragma: no cover
             return False, f"docx export error: {exc}", str(exc)

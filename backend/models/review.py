@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
@@ -19,7 +19,7 @@ class QuestionReview(Base):
     reviewer_id = Column(String(36), nullable=True)
     status = Column(String(32), default="pending")  # pending/approved/rejected
     comment = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     question = relationship("Question", back_populates="reviews")

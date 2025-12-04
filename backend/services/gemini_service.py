@@ -2,6 +2,7 @@ import json
 import mimetypes
 import os
 from typing import Optional
+import re
 
 from fastapi import UploadFile
 
@@ -29,8 +30,11 @@ class GeminiService:
         self.model_name = model
         self._client = None
         if self.api_key and genai:
-            genai.configure(api_key=self.api_key)
-            self._client = genai.GenerativeModel(self.model_name)
+            try:
+                genai.configure(api_key=self.api_key)
+                self._client = genai.GenerativeModel(self.model_name)
+            except Exception:
+                self._client = None
 
     async def analyze(self, file: UploadFile):
         if not self._client:
@@ -49,6 +53,7 @@ class GeminiService:
             }
 
         file_bytes = await file.read()
+        file.file.seek(0)
         mime, _ = mimetypes.guess_type(file.filename or "")
         mime = mime or "image/png"
         image_part = {"mime_type": mime, "data": file_bytes}
@@ -77,6 +82,7 @@ def _analysis_prompt() -> str:
   "questionType": "choice/fillblank/solve/proof",
   "confidence": 0.0-1.0
 }
+重要：questionText 只包含题干和选项，不要包含任何答案或解析；答案与解题步骤只放在 answer 字段。
 SVG 生成要求：
 - 使用 <line>, <circle>, <ellipse>, <path>, <text> 标签
 - 虚线用 stroke-dasharray="5,5"
@@ -93,7 +99,7 @@ def _extract_json(text: str):
         cleaned = cleaned.split("```", 1)[1].split("```", 1)[0]
     cleaned = cleaned.strip()
     try:
-        return json.loads(cleaned)
+        data = json.loads(cleaned)
     except Exception:
         # 返回原始内容便于调试
         return {
@@ -107,3 +113,33 @@ def _extract_json(text: str):
             "questionType": None,
             "confidence": None,
         }
+    if isinstance(data, dict):
+        qt = data.get("questionText") or ""
+        ans = data.get("answer") or ""
+        lower_qt = qt.lower()
+        split_tokens = ["答案：", "参考答案", "解答：", "解析：", "solution", "answer:"]
+        ans_part = None
+        for token in split_tokens:
+            if token.lower() in lower_qt:
+                idx = lower_qt.index(token.lower())
+                ans_part = qt[idx:]
+                data["questionText"] = qt[:idx].strip()
+                if ans_part and ans_part not in ans:
+                    data["answer"] = (ans + "\n\n" + ans_part).strip()
+                break
+        data["questionText"] = _strip_images(data.get("questionText") or "").strip()
+    return data
+
+
+def _strip_images(text: str) -> str:
+    """
+    去掉 questionText 中的 markdown/HTML 图片，避免 base64 占位。
+    """
+    if not text:
+        return ""
+    # 优先移除 base64 图片
+    text = re.sub(r'!\[[^\]]*\]\(data:image/[^)]+\)', '', text)
+    # 可选：移除所有 Markdown 图片（如需）
+    # text = re.sub(r'!\[[^\]]*\]\([^)]+\)', '', text)
+    text = re.sub(r'<img[^>]*>', '', text, flags=re.IGNORECASE)
+    return text

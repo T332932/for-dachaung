@@ -19,15 +19,19 @@ async def create_review(
     """
     题目审核记录创建（简易占位）。
     """
-    review = orm.QuestionReview(
-        question_id=payload.questionId,
-        reviewer_id=payload.reviewerId or (current_user.id if current_user else None),
-        status=payload.status,
-        comment=payload.comment,
-    )
-    db.add(review)
-    db.commit()
-    db.refresh(review)
+    try:
+        review = orm.QuestionReview(
+            question_id=payload.questionId,
+            reviewer_id=payload.reviewerId or (current_user.id if current_user else None),
+            status=payload.status,
+            comment=payload.comment,
+        )
+        db.add(review)
+        db.commit()
+        db.refresh(review)
+    except Exception:
+        db.rollback()
+        raise
     return ReviewView(
         id=review.id,
         questionId=review.question_id,
