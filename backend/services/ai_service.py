@@ -162,69 +162,195 @@ SVG 生成要求：
             return f"{format_requirement}\n\n{default_instructions}"
     
     def _extract_json(self, text: str):
-        """从文本中提取JSON"""
+        """从文本中提取JSON，增强版：处理嵌套内容、控制字符等"""
         import re
         
         cleaned = text.strip()
         
-        # 尝试多种方式提取JSON
         # 1. 处理 ```json ... ``` 格式
         if "```json" in cleaned:
             cleaned = cleaned.split("```json", 1)[1].split("```", 1)[0].strip()
         elif "```" in cleaned:
-            # 可能是 ``` 包裹的代码块
             parts = cleaned.split("```")
             if len(parts) >= 2:
                 cleaned = parts[1].strip()
-                # 如果第一行是语言标识，去掉它
                 if cleaned.startswith("json"):
                     cleaned = cleaned[4:].strip()
         
-        # 2. 尝试找到JSON对象 { ... }
+        # 2. 使用括号匹配找到完整的JSON对象
+        def find_json_object(s: str) -> str:
+            """通过括号匹配找到完整的JSON对象"""
+            start = s.find('{')
+            if start == -1:
+                return s
+            
+            depth = 0
+            in_string = False
+            escape = False
+            end = start
+            
+            for i, c in enumerate(s[start:], start):
+                if escape:
+                    escape = False
+                    continue
+                if c == '\\':
+                    escape = True
+                    continue
+                if c == '"' and not escape:
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                    if depth == 0:
+                        end = i + 1
+                        break
+            
+            return s[start:end]
+        
         if not cleaned.startswith("{"):
-            match = re.search(r'\{[\s\S]*\}', cleaned)
-            if match:
-                cleaned = match.group(0)
+            cleaned = find_json_object(cleaned)
         
-        # 3. 清理可能导致JSON解析失败的控制字符
-        # 替换真实的换行为转义后的换行（确保在字符串值内部）
-        # 首先尝试直接解析，如果失败再尝试修复
-        
-        # 3. 尝试解析
-        try:
-            data = json.loads(cleaned)
-            # 解析成功，进行后处理
-            if isinstance(data, dict):
-                return self._post_process_json(data)
-            return data
-        except json.JSONDecodeError:
-            # 尝试修复控制字符问题：将JSON字符串值内的换行符转义
+        # 3. 多策略尝试解析
+        def try_parse(s: str):
+            """尝试解析JSON，失败返回None"""
             try:
-                # 尝试用更宽松的方式解析
-                import ast
-                # 替换真实换行为 \\n（在JSON字符串值内部）
-                fixed = cleaned
-                # 移除可能的 BOM
-                if fixed.startswith('\ufeff'):
-                    fixed = fixed[1:]
-                data = json.loads(fixed, strict=False)
-                if isinstance(data, dict):
-                    return self._post_process_json(data)
-                return data
-            except Exception as e:
-                # 解析失败，返回原始文本作为questionText
-                return {
-                    "questionText": text or "未能解析 JSON，请检查模型输出。",
-                    "options": None,
-                    "answer": "",
-                    "hasGeometry": False,
-                    "geometrySvg": None,
-                    "knowledgePoints": [],
-                    "difficulty": None,
-                    "questionType": None,
-                    "confidence": None,
-                    "_parseError": str(e),
-                }
+                return json.loads(s)
+            except:
+                return None
+        
+        # 策略1: 直接解析
+        data = try_parse(cleaned)
+        if data and isinstance(data, dict):
+            return self._post_process_json(data)
+        
+        # 策略2: 移除BOM，使用非严格模式
+        fixed = cleaned
+        if fixed.startswith('\ufeff'):
+            fixed = fixed[1:]
+        
+        data = try_parse(fixed)
+        if data and isinstance(data, dict):
+            return self._post_process_json(data)
+        
+        # 策略3: 修复字符串内的换行符
+        # 在JSON字符串值内部，将真实换行替换为 \n
+        def fix_newlines_in_strings(s: str) -> str:
+            result = []
+            in_string = False
+            escape = False
+            for c in s:
+                if escape:
+                    result.append(c)
+                    escape = False
+                    continue
+                if c == '\\':
+                    result.append(c)
+                    escape = True
+                    continue
+                if c == '"':
+                    in_string = not in_string
+                    result.append(c)
+                    continue
+                if in_string and c == '\n':
+                    result.append('\\n')
+                elif in_string and c == '\r':
+                    result.append('\\r')
+                elif in_string and c == '\t':
+                    result.append('\\t')
+                else:
+                    result.append(c)
+            return ''.join(result)
+        
+        fixed = fix_newlines_in_strings(cleaned)
+        data = try_parse(fixed)
+        if data and isinstance(data, dict):
+            return self._post_process_json(data)
+        
+        # 策略4: 尝试用正则提取各个字段
+        try:
+            result = {}
+            # 提取 questionText
+            qt_match = re.search(r'"questionText"\s*:\s*"((?:[^"\\]|\\.)*)?"', cleaned, re.DOTALL)
+            if qt_match:
+                result["questionText"] = qt_match.group(1).replace('\\n', '\n').replace('\\"', '"') if qt_match.group(1) else ""
+            
+            # 提取 answer
+            ans_match = re.search(r'"answer"\s*:\s*"((?:[^"\\]|\\.)*)"', cleaned, re.DOTALL)
+            if ans_match:
+                result["answer"] = ans_match.group(1).replace('\\n', '\n').replace('\\"', '"')
+            
+            # 提取 hasGeometry
+            hg_match = re.search(r'"hasGeometry"\s*:\s*(true|false)', cleaned)
+            if hg_match:
+                result["hasGeometry"] = hg_match.group(1) == "true"
+            
+            # 提取 geometrySvg
+            svg_match = re.search(r'"geometrySvg"\s*:\s*"((?:[^"\\]|\\.)*)"', cleaned, re.DOTALL)
+            if svg_match:
+                result["geometrySvg"] = svg_match.group(1).replace('\\n', '\n').replace('\\"', '"').replace('\\/', '/')
+            
+            # 提取 difficulty
+            diff_match = re.search(r'"difficulty"\s*:\s*"(\w+)"', cleaned)
+            if diff_match:
+                result["difficulty"] = diff_match.group(1)
+            
+            # 提取 questionType
+            qt_type_match = re.search(r'"questionType"\s*:\s*"(\w+)"', cleaned)
+            if qt_type_match:
+                result["questionType"] = qt_type_match.group(1)
+            
+            # 提取 confidence
+            conf_match = re.search(r'"confidence"\s*:\s*([\d.]+)', cleaned)
+            if conf_match:
+                result["confidence"] = float(conf_match.group(1))
+            
+            # 提取 knowledgePoints (简化处理)
+            kp_match = re.search(r'"knowledgePoints"\s*:\s*\[(.*?)\]', cleaned, re.DOTALL)
+            if kp_match:
+                kp_str = kp_match.group(1)
+                kps = re.findall(r'"([^"]*)"', kp_str)
+                result["knowledgePoints"] = kps
+            
+            # 提取 options
+            opt_match = re.search(r'"options"\s*:\s*\[(.*?)\]', cleaned, re.DOTALL)
+            if opt_match:
+                opt_str = opt_match.group(1)
+                opts = re.findall(r'"((?:[^"\\]|\\.)*)"', opt_str)
+                result["options"] = opts if opts else None
+            else:
+                result["options"] = None
+            
+            if result.get("questionText") or result.get("answer"):
+                # 填充缺失字段
+                result.setdefault("questionText", "")
+                result.setdefault("answer", "")
+                result.setdefault("hasGeometry", False)
+                result.setdefault("geometrySvg", None)
+                result.setdefault("knowledgePoints", [])
+                result.setdefault("difficulty", None)
+                result.setdefault("questionType", None)
+                result.setdefault("confidence", None)
+                return self._post_process_json(result)
+        except Exception:
+            pass
+        
+        # 全部失败，返回错误
+        return {
+            "questionText": text or "未能解析 JSON，请检查模型输出。",
+            "options": None,
+            "answer": "",
+            "hasGeometry": False,
+            "geometrySvg": None,
+            "knowledgePoints": [],
+            "difficulty": None,
+            "questionType": None,
+            "confidence": None,
+            "_parseError": "所有解析策略均失败",
+        }
     
     def _post_process_json(self, data: dict) -> dict:
         if isinstance(data, dict):
