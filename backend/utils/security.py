@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from config import get_settings
 from models import orm
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 settings = get_settings()
 
 
