@@ -25,6 +25,52 @@ class ExportService:
     - compile_pdf: 调用本地 pdflatex，如果不可用则返回错误。
     - build_docx: 使用 python-docx 生成 Word。
     """
+    def build_single_question_latex(
+        self,
+        question: dict,
+        include_answer: bool = True,
+        include_explanation: bool = True,
+    ) -> Tuple[str, List[Tuple[str, bytes]]]:
+        """
+        为单题生成可编译的 LaTeX 片段，返回 (latex, attachments)
+        """
+        header = r"""\documentclass[12pt,a4paper]{article}
+\usepackage{ctex}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{tikz}
+\geometry{left=2cm,right=2cm,top=2.5cm,bottom=2.5cm}
+\begin{document}
+"""
+        body_parts: List[str] = []
+        attachments: List[Tuple[str, bytes]] = []
+
+        body_parts.append(self._escape_latex(question.get("questionText") or ""))
+        options = question.get("options") or []
+        for opt in options:
+            body_parts.append(r"\par " + self._escape_latex(opt))
+
+        if question.get("hasGeometry") and question.get("geometryTikz"):
+            body_parts.append("\n" + question.get("geometryTikz") + "\n")
+        elif question.get("hasGeometry") and question.get("geometrySvg"):
+            svg_result = self._svg_to_png_attachment(question.get("geometrySvg"))
+            if svg_result:
+                fname, data = svg_result
+                attachments.append((fname, data))
+                body_parts.append(f'\n\\includegraphics[width=0.6\\textwidth]{{{fname}}}\n')
+            else:
+                body_parts.append("\n% TODO: embed SVG or convert to TikZ\n")
+
+        if include_answer and question.get("answer"):
+            body_parts.append(f"\n\\textbf{{答案：}} {self._escape_latex(question.get('answer') or '')}")
+        if include_explanation and question.get("explanation"):
+            body_parts.append(f"\n\\textbf{{解析：}} {self._escape_latex(question.get('explanation') or '')}")
+
+        footer = r"""\end{document}
+"""
+        latex = header + "\n\n".join(body_parts) + footer
+        return latex, attachments
 
     async def export_stub(self, paper_id: str, fmt: str, paper_payload: dict | None = None):
         return {
@@ -195,6 +241,18 @@ class ExportService:
             png_bytes = cairosvg.svg2png(bytestring=svg_content.encode("utf-8"))
             fname = f"svg_{uuid.uuid4().hex}.png"
             return fname, png_bytes
+        except Exception:
+            return None
+
+    def svg_to_png_base64(self, svg_content: str) -> str | None:
+        """
+        将 SVG 转 base64 PNG，前端可直接展示。
+        """
+        if not svg_content or cairosvg is None:
+            return None
+        try:
+            png_bytes = cairosvg.svg2png(bytestring=svg_content.encode("utf-8"))
+            return f"data:image/png;base64,{base64.b64encode(png_bytes).decode('utf-8')}"
         except Exception:
             return None
 
