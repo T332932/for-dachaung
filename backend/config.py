@@ -6,8 +6,20 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     database_url: str = "sqlite:///./app.db"
+    
+    # AI Provider选择: "gemini" 或 "openai"
+    ai_provider: str = "gemini"
+    
+    # Gemini配置
     gemini_api_key: Optional[str] = None
     gemini_model: str = "gemini-2.5-pro"
+    
+    # OpenAI配置（或OpenAI兼容的API）
+    openai_api_key: Optional[str] = None
+    openai_model: str = "gpt-4o"
+    openai_base_url: Optional[str] = None  # 如 http://localhost:3000/v1 用于代理
+    
+    # 安全配置
     secret_key: str = "change-me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60

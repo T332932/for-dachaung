@@ -1,0 +1,28 @@
+#!/bin/bash
+# 快速服务器部署指令
+# 在服务器上按顺序执行
+
+echo "=========================================="
+echo "服务器部署快速命令"
+echo "=========================================="
+echo ""
+
+echo "步骤1: 克隆代码"
+echo "git clone https://github.com/T332932/for-dachaung.git"
+echo "cd for-dachaung"
+echo ""
+
+echo "步骤2: 设置Gemini API Key"
+echo "export GEMINI_API_KEY='your_gemini_api_key_here'"
+echo ""
+
+echo "步骤3: 运行部署脚本"
+echo "bash deploy.sh"
+echo ""
+
+echo "或者手动执行："
+echo "docker-compose up -d --build"
+echo "sleep 10"
+echo "docker-compose exec api alembic upgrade head"
+echo "curl http://localhost:8000/health"
+echo ""

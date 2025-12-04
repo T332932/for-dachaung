@@ -18,7 +18,7 @@ from models.schemas import (
 )
 from models import orm
 from db import get_db
-from services.gemini_service import GeminiService, get_gemini_service
+from services.ai_service import AIService, get_ai_service
 from services.export_service import ExportService
 from utils.deps import get_current_user, require_role
 
@@ -30,14 +30,14 @@ export_service = ExportService()
 @router.post("/questions/analyze", response_model=QuestionAnalysisResponse)
 async def analyze_question(
     file: UploadFile = File(...),
-    gemini: GeminiService = Depends(get_gemini_service),
+    ai_service: AIService = Depends(get_ai_service),
     _: orm.User = Depends(require_role(["teacher", "admin"])),
 ):
     """
     题目图片/文件解析：OCR + 结构化 + SVG（若有几何）。
-    当前为占位实现，若未配置 GEMINI_API_KEY 会返回 stub 结果。
+    支持 Gemini 或 OpenAI（通过配置选择）。
     """
-    return await gemini.analyze(file)
+    return await ai_service.analyze(file)
 
 
 @router.post("/questions", response_model=QuestionCreateResponse)
