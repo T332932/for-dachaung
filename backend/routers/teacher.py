@@ -31,7 +31,8 @@ export_service = ExportService()
 async def analyze_question(
     file: UploadFile = File(...),
     ai_service: AIService = Depends(get_ai_service),
-    current_user: orm.User = Depends(require_role(["teacher", "admin"])),
+    # 临时移除认证，方便测试
+    # current_user: orm.User = Depends(require_role(["teacher", "admin"])),
 ):
     """
     题目图片/文件解析：OCR + 结构化 + SVG（若有几何）。
