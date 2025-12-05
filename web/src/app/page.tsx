@@ -10,24 +10,11 @@ export default function LandingPage() {
     const router = useRouter();
 
     return (
-        <div className="min-h-screen bg-background relative overflow-hidden">
+        <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
             {/* Background Elements */}
-            <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
-                style={{
-                    backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
-                    backgroundSize: '40px 40px'
-                }}
-            />
-
-            {/* Floating Math Symbols (Decorative) */}
-            <div className="absolute top-20 left-10 text-6xl text-primary/5 animate-pulse select-none z-0">
-                <MathText>{'\\sum_{i=1}^n i^2'}</MathText>
-            </div>
-            <div className="absolute bottom-40 right-20 text-6xl text-primary/5 animate-pulse delay-700 select-none z-0">
-                <MathText>{'\\int_0^\\infty e^{-x^2} dx'}</MathText>
-            </div>
-            <div className="absolute top-1/3 right-1/4 text-4xl text-primary/5 animate-pulse delay-1000 select-none z-0">
-                <MathText>{'E = mc^2'}</MathText>
+            <div className="absolute inset-0 z-0 pointer-events-none">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+                <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-primary/20 opacity-20 blur-[100px]"></div>
             </div>
 
             {/* Header */}
@@ -51,7 +38,7 @@ export default function LandingPage() {
             </header>
 
             {/* Hero Section */}
-            <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 z-10">
+            <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 z-10 flex-grow">
                 <div className="container mx-auto px-6 text-center">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                         <Sparkles className="h-3 w-3" />
@@ -59,13 +46,13 @@ export default function LandingPage() {
                     </div>
 
                     <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-                        Math + AI = <span className="text-gradient">Your New Workflow</span>
+                        让组卷回归 <span className="text-gradient">教学本质</span>
                     </h1>
 
                     <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
                         从一张照片，到一份完美的 LaTeX 试卷。
                         <br />
-                        自动识别、智能去噪、语义搜题，让教研回归思考。
+                        自动识别、智能去噪、语义搜题，让教研工作更高效。
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
@@ -73,7 +60,7 @@ export default function LandingPage() {
                             立即开始使用 <ArrowRight className="ml-2 w-4 h-4" />
                         </Button>
                         <Button size="lg" variant="outline" onClick={() => router.push('/login')} className="h-12 px-8 text-base">
-                            演示账号登录
+                            登录系统
                         </Button>
                     </div>
                 </div>
@@ -116,29 +103,8 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* Tech Stack / Trust */}
-            <section className="py-20">
-                <div className="container mx-auto px-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-8 uppercase tracking-wider">Powered By Modern AI Stack</p>
-                    <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-                        <div className="flex items-center gap-2 font-semibold text-lg">
-                            <span className="text-sky-500">⚛</span> React & Next.js
-                        </div>
-                        <div className="flex items-center gap-2 font-semibold text-lg">
-                            <span className="text-emerald-500">▲</span> Vercel
-                        </div>
-                        <div className="flex items-center gap-2 font-semibold text-lg">
-                            <span className="text-blue-500">G</span> Gemini Pro
-                        </div>
-                        <div className="flex items-center gap-2 font-semibold text-lg">
-                            <span className="text-green-600">K</span> KaTeX
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             {/* Footer */}
-            <footer className="border-t border-border/40 py-8">
+            <footer className="border-t border-border/40 py-8 mt-auto">
                 <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">
                     <p>© 2025 智题云卷. All rights reserved.</p>
                 </div>

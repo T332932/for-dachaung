@@ -1,7 +1,7 @@
 import os
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from config import get_settings
@@ -33,18 +33,19 @@ def _ensure_is_public_column():
     仅做轻量防护，真正生产环境应使用 Alembic。
     """
     try:
-        if _is_sqlite:
-            res = engine.execute("PRAGMA table_info(questions);")
-            cols = [row[1] for row in res.fetchall()]
-            if "is_public" not in cols:
-                engine.execute("ALTER TABLE questions ADD COLUMN is_public BOOLEAN DEFAULT 0;")
-        elif DATABASE_URL.startswith("postgres"):
-            res = engine.execute(
-                "SELECT column_name FROM information_schema.columns WHERE table_name='questions';"
-            )
-            cols = [row[0] for row in res.fetchall()]
-            if "is_public" not in cols:
-                engine.execute("ALTER TABLE questions ADD COLUMN is_public BOOLEAN DEFAULT FALSE;")
+        with engine.begin() as conn:
+            if _is_sqlite:
+                res = conn.execute(text("PRAGMA table_info(questions);"))
+                cols = [row[1] for row in res.fetchall()]
+                if "is_public" not in cols:
+                    conn.execute(text("ALTER TABLE questions ADD COLUMN is_public BOOLEAN DEFAULT 0;"))
+            elif DATABASE_URL.startswith("postgres"):
+                res = conn.execute(
+                    text("SELECT column_name FROM information_schema.columns WHERE table_name='questions';")
+                )
+                cols = [row[0] for row in res.fetchall()]
+                if "is_public" not in cols:
+                    conn.execute(text("ALTER TABLE questions ADD COLUMN is_public BOOLEAN DEFAULT FALSE;"))
         else:
             # 其他数据库不做自动迁移
             pass
