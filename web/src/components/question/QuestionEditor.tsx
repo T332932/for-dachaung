@@ -2,9 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
 import { questionApi, QuestionPayload } from '@/lib/api-client';
 import { QuestionAnalysisResult } from './QuestionUploader';
 import { MathText } from '@/components/ui/MathText';
+import { Save, Download, RotateCcw, Eye, Edit3, AlertTriangle, CheckCircle2, X } from 'lucide-react';
 
 interface QuestionEditorProps {
     initialData: QuestionAnalysisResult;
@@ -26,71 +31,46 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
     );
     const [difficulty, setDifficulty] = useState(initialData.difficulty || 'medium');
     const [questionType, setQuestionType] = useState(initialData.questionType || 'solve');
-    const [isPublic, setIsPublic] = useState(false);  // 默认私有
+    const [isPublic, setIsPublic] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isMountedRef = useRef(true);
 
-    // 组件挂载/卸载状态管理
     useEffect(() => {
         isMountedRef.current = true;
         return () => {
             isMountedRef.current = false;
-            // 清理定时器
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-            }
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
     }, []);
 
     const handleSubmit = async () => {
-        // 防止重复提交
-        if (isSaving) {
-            return;
-        }
-
-        // 验证必填字段
+        if (isSaving) return;
         if (!questionText.trim()) {
-            alert('题目内容不能为空，请重新上传');
+            alert('题目内容不能为空');
             return;
         }
         if (!answer.trim()) {
-            alert('答案不能为空，请重新上传');
+            alert('答案不能为空');
             return;
         }
 
         setIsSaving(true);
         try {
-            // 定义有效的枚举值
             const validDifficulties = ['easy', 'medium', 'hard'] as const;
             const validQuestionTypes = ['choice', 'fillblank', 'solve', 'proof'] as const;
 
-            // 类型守卫函数
-            const isValidDifficulty = (val: any): val is typeof validDifficulties[number] => {
-                return typeof val === 'string' && validDifficulties.includes(val as any);
-            };
+            const isValidDifficulty = (val: any): val is typeof validDifficulties[number] =>
+                typeof val === 'string' && validDifficulties.includes(val as any);
 
-            const isValidQuestionType = (val: any): val is typeof validQuestionTypes[number] => {
-                return typeof val === 'string' && validQuestionTypes.includes(val as any);
-            };
+            const isValidQuestionType = (val: any): val is typeof validQuestionTypes[number] =>
+                typeof val === 'string' && validQuestionTypes.includes(val as any);
 
-            // 处理选项：确保是数组或null
-            let processedOptions: string[] | null = null;
-            const optionLines = optionsText
-                .split('\n')
-                .map((s) => s.trim())
-                .filter((s) => s.length > 0);
-            processedOptions = optionLines.length > 0 ? optionLines : null;
-
-            // 处理知识点：确保是数组
-            const kpList = knowledgeText
-                .split(',')
-                .map((s) => s.trim())
-                .filter((s) => s.length > 0);
-            const processedKnowledgePoints: string[] = kpList;
+            const processedOptions = optionsText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+            const processedKnowledgePoints = knowledgeText.split(',').map(s => s.trim()).filter(s => s.length > 0);
 
             const payload: QuestionPayload = {
                 questionText: questionText.trim(),
-                options: processedOptions,
+                options: processedOptions.length > 0 ? processedOptions : null,
                 answer: answer.trim(),
                 explanation: undefined,
                 hasGeometry: Boolean(initialData.hasGeometry),
@@ -107,7 +87,6 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
 
             await questionApi.create(payload);
 
-            // 检查组件是否仍然挂载
             if (isMountedRef.current) {
                 onSave({
                     ...initialData,
@@ -120,43 +99,30 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
                 });
             }
         } catch (error: any) {
-            // 只在组件仍然挂载时显示错误
             if (isMountedRef.current) {
                 console.error('Save failed:', error);
                 const errorMessage = error?.userMessage || error?.response?.data?.detail || error?.message || '保存失败，请重试';
                 alert(errorMessage);
             }
         } finally {
-            // 只在组件仍然挂载时更新状态
-            if (isMountedRef.current) {
-                setIsSaving(false);
-            }
+            if (isMountedRef.current) setIsSaving(false);
         }
     };
 
     const handleDownloadPdf = async () => {
-        // 防止重复下载
-        if (isDownloading) {
-            return;
-        }
-
+        if (isDownloading) return;
         if (!file) {
-            alert('缺少原始文件，无法生成 PDF 预览，请重新上传。');
+            alert('缺少原始文件，无法生成 PDF 预览');
             return;
         }
         setIsDownloading(true);
         let blobUrl: string | null = null;
         try {
             const blob = await questionApi.previewPdf(file, { includeAnswer: true, includeExplanation: false });
+            if (!isMountedRef.current) return;
 
-            // 检查组件是否仍然挂载
-            if (!isMountedRef.current) {
-                return;
-            }
+            if (!(blob instanceof Blob) || blob.size === 0) throw new Error('PDF生成失败');
 
-            if (!(blob instanceof Blob) || blob.size === 0) {
-                throw new Error('PDF生成失败：返回的数据无效');
-            }
             blobUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = blobUrl;
@@ -164,261 +130,229 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
             document.body.appendChild(link);
             link.click();
             link.remove();
-            // 延迟清理 URL，确保下载已开始
+
             timeoutRef.current = setTimeout(() => {
-                if (blobUrl && isMountedRef.current) {
-                    window.URL.revokeObjectURL(blobUrl);
-                }
+                if (blobUrl && isMountedRef.current) window.URL.revokeObjectURL(blobUrl);
                 timeoutRef.current = null;
             }, 100);
         } catch (error: any) {
-            // 只在组件仍然挂载时处理错误
-            if (!isMountedRef.current) {
-                return;
-            }
-
+            if (!isMountedRef.current) return;
             console.error('PDF preview failed:', error);
-            // 清理可能创建的 URL 和定时器
-            if (blobUrl) {
-                window.URL.revokeObjectURL(blobUrl);
-            }
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-                timeoutRef.current = null;
-            }
-
-            // 尝试读取后端错误
-            const respData = error?.response?.data;
-            let errorMessage = 'PDF 预览失败';
-
-            if (respData instanceof Blob) {
-                try {
-                    // 克隆 Blob 以避免消耗原始 Blob
-                    const clonedBlob = respData.slice();
-                    const text = await clonedBlob.text();
-                    const json = JSON.parse(text);
-                    errorMessage = `PDF 预览失败：${json.detail || json.error || '未知错误'}`;
-                } catch {
-                    errorMessage = error?.userMessage || 'PDF 预览失败，请确认后端已安装 pdflatex';
-                }
-            } else {
-                errorMessage = error?.userMessage || 'PDF 预览失败，请确认后端已安装 pdflatex';
-            }
-
-            alert(errorMessage);
+            if (blobUrl) window.URL.revokeObjectURL(blobUrl);
+            alert(error?.userMessage || 'PDF 预览失败');
         } finally {
-            // 只在组件仍然挂载时更新状态
-            if (isMountedRef.current) {
-                setIsDownloading(false);
-            }
+            if (isMountedRef.current) setIsDownloading(false);
         }
     };
 
     return (
-        <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex justify-between items-center border-b pb-4">
-                <h3 className="text-lg font-semibold">题目预览</h3>
-                <div className="flex items-center space-x-4">
-                    <label className="flex items-center space-x-2 text-sm text-gray-600">
-                        <input
-                            type="checkbox"
-                            checked={isPublic}
-                            onChange={(e) => setIsPublic(e.target.checked)}
-                            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                        />
-                        <span>公开到题库</span>
-                    </label>
-                    <Button variant="outline" onClick={handleDownloadPdf} disabled={isDownloading || !file}>
-                        {isDownloading ? '生成中...' : '下载 PDF 预览'}
-                    </Button>
-                    <Button variant="ghost" onClick={onCancel}>重新上传</Button>
-                    <Button onClick={handleSubmit} disabled={isSaving}>
-                        {isSaving ? '入库中...' : '确认入库'}
-                    </Button>
+        <div className="h-[calc(100vh-100px)] flex flex-col lg:flex-row gap-6">
+            {/* 左侧：预览区域 */}
+            <Card className="flex-1 flex flex-col overflow-hidden bg-secondary/10 border-border/50">
+                <div className="p-4 border-b border-border/50 bg-background/50 backdrop-blur flex justify-between items-center shrink-0">
+                    <h3 className="font-semibold flex items-center gap-2">
+                        <Eye className="w-4 h-4 text-primary" />
+                        实时预览
+                    </h3>
+                    <div className="flex items-center gap-2">
+                        {initialData.similarQuestions && initialData.similarQuestions.length > 0 && (
+                            <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                {initialData.similarQuestions.length} 相似题
+                            </span>
+                        )}
+                    </div>
                 </div>
-            </div>
 
-            {/* 相似题警告 */}
-            {initialData.similarQuestions && initialData.similarQuestions.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                        <span className="text-amber-600 text-xl">⚠️</span>
-                        <div className="flex-1">
-                            <h4 className="font-medium text-amber-800 mb-2">
-                                发现 {initialData.similarQuestions.length} 道相似题目
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    {/* 相似题警告 */}
+                    {initialData.similarQuestions && initialData.similarQuestions.length > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 animate-in slide-in-from-top-2">
+                            <h4 className="font-medium text-amber-800 mb-2 text-sm flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4" />
+                                题库中已存在高度相似的题目
                             </h4>
-                            <p className="text-sm text-amber-700 mb-3">
-                                题库中已存在高度相似的题目，请确认是否需要入库：
-                            </p>
-                            <div className="space-y-2">
-                                {initialData.similarQuestions.map((sq, idx) => (
-                                    <div key={sq.id} className="bg-white rounded p-3 border border-amber-100">
-                                        <div className="flex justify-between items-start mb-1">
-                                            <span className="text-xs text-amber-600 font-medium">
-                                                相似度: {Math.round(sq.similarity * 100)}%
-                                            </span>
-                                            {sq.difficulty && (
-                                                <span className="text-xs text-gray-500">
-                                                    难度: {sq.difficulty}
-                                                </span>
-                                            )}
+                            <div className="space-y-2 pl-6">
+                                {initialData.similarQuestions.map((sq) => (
+                                    <div key={sq.id} className="text-xs text-amber-900/80 bg-white/50 p-2 rounded border border-amber-100">
+                                        <div className="flex justify-between mb-1">
+                                            <span className="font-medium">相似度: {Math.round(sq.similarity * 100)}%</span>
+                                            <span className="opacity-70">ID: {sq.id.slice(0, 8)}</span>
                                         </div>
-                                        <p className="text-sm text-gray-700 line-clamp-2">
-                                            {sq.questionText}
-                                        </p>
+                                        <p className="line-clamp-2 opacity-80">{sq.questionText}</p>
                                     </div>
                                 ))}
                             </div>
-                            <p className="text-xs text-amber-600 mt-3">
-                                💡 如果确认是同一道题，建议点击"重新上传"选择其他题目
-                            </p>
                         </div>
-                    </div>
-                </div>
-            )}
+                    )}
 
-            <div className="grid grid-cols-1 gap-6">
-                {/* 几何图形预览 */}
-                {initialData?.hasGeometry && ((typeof initialData?.svgPng === 'string' && initialData.svgPng.startsWith('data:image')) || initialData?.geometrySvg) && (
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">📐 几何图形 (AI生成)</label>
-                        <div className="border rounded-md p-4 bg-white flex justify-center overflow-auto max-h-[320px]">
+                    {/* 几何图形 */}
+                    {initialData?.hasGeometry && ((typeof initialData?.svgPng === 'string' && initialData.svgPng.startsWith('data:image')) || initialData?.geometrySvg) && (
+                        <div className="flex justify-center p-4 bg-white rounded-xl border border-border shadow-sm">
                             {initialData.svgPng && initialData.svgPng.startsWith('data:image') ? (
                                 <img
                                     src={initialData.svgPng}
                                     alt="geometry preview"
-                                    className="max-h-[280px]"
-                                    onError={(e) => {
-                                        console.error('Image load failed:', e);
-                                        // 如果图片加载失败，尝试显示 SVG
-                                        const target = e.currentTarget;
-                                        target.style.display = 'none';
-                                    }}
+                                    className="max-h-[200px] object-contain"
                                 />
                             ) : (
                                 <div
-                                    className="w-full"
+                                    className="w-full max-w-[300px]"
                                     dangerouslySetInnerHTML={{ __html: initialData.geometrySvg || '' }}
                                 />
                             )}
                         </div>
-                    </div>
-                )}
-
-                {/* 题干展示 */}
-                <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">📝 题目内容</label>
-                    <textarea
-                        className="w-full min-h-[120px] p-3 border rounded-md text-sm"
-                        value={questionText}
-                        onChange={(e) => setQuestionText(e.target.value)}
-                        placeholder="Markdown + LaTeX，支持 $...$ 或 $$...$$"
-                    />
-                    <div className="w-full min-h-[120px] p-3 border rounded-md bg-gray-50 text-sm">
-                        <MathText>{questionText || '（无内容）'}</MathText>
-                    </div>
-                </div>
-
-                {/* 选项（选择题） */}
-                <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">🔘 选项（每行一个，空则视为无选项）</label>
-                    <textarea
-                        className="w-full min-h-[100px] p-3 border rounded-md text-sm"
-                        value={optionsText}
-                        onChange={(e) => setOptionsText(e.target.value)}
-                        placeholder="A. ...\nB. ..."
-                    />
-                    {optionsText.trim() && (
-                        <div className="space-y-2 p-3 border rounded-md bg-gray-50">
-                            {optionsText
-                                .split('\n')
-                                .map((opt) => opt.trim())
-                                .filter((opt) => opt.length > 0)
-                                .map((opt, idx) => (
-                                    <div key={idx} className="text-sm"><MathText>{opt}</MathText></div>
-                                ))}
-                        </div>
                     )}
-                </div>
 
-                {/* 答案展示 */}
-                <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">✅ 答案与解析</label>
-                    <textarea
-                        className="w-full min-h-[150px] p-3 border rounded-md text-sm"
-                        value={answer}
-                        onChange={(e) => setAnswer(e.target.value)}
-                        placeholder="答案/解析，支持 Markdown + LaTeX"
-                    />
-                    <div className="w-full min-h-[150px] p-3 border rounded-md bg-gray-50 text-sm">
-                        <MathText>{answer || '（无答案）'}</MathText>
+                    {/* 题目预览 */}
+                    <div className="space-y-4">
+                        <div className="bg-white rounded-xl p-6 shadow-sm border border-border">
+                            <div className="prose prose-sm max-w-none">
+                                <MathText>{questionText || '<span class="text-gray-400 italic">题目内容为空...</span>'}</MathText>
+                            </div>
+
+                            {optionsText.trim() && (
+                                <div className="mt-4 space-y-2">
+                                    {optionsText.split('\n').filter(o => o.trim()).map((opt, idx) => (
+                                        <div key={idx} className="text-sm pl-4 border-l-2 border-primary/20">
+                                            <MathText>{opt}</MathText>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-emerald-50/50 rounded-xl p-6 shadow-sm border border-emerald-100">
+                            <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-3">Answer & Explanation</h4>
+                            <div className="prose prose-sm max-w-none text-emerald-900/80">
+                                <MathText>{answer || '<span class="text-gray-400 italic">暂无答案...</span>'}</MathText>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+
+            {/* 右侧：编辑区域 */}
+            <Card className="flex-1 flex flex-col overflow-hidden border-border shadow-lg">
+                <div className="p-4 border-b border-border bg-background flex justify-between items-center shrink-0">
+                    <h3 className="font-semibold flex items-center gap-2">
+                        <Edit3 className="w-4 h-4 text-primary" />
+                        编辑内容
+                    </h3>
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={onCancel} className="h-8 text-muted-foreground">
+                            <X className="w-4 h-4 mr-1" /> 取消
+                        </Button>
+                        <Button onClick={handleSubmit} disabled={isSaving} size="sm" className="h-8 gap-1.5">
+                            {isSaving ? <RotateCcw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                            {isSaving ? '入库中...' : '确认入库'}
+                        </Button>
                     </div>
                 </div>
 
-                {/* 知识点 */}
-                <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">🎯 知识点（用逗号分隔）</label>
-                    <input
-                        className="w-full p-3 border rounded-md text-sm"
-                        value={knowledgeText}
-                        onChange={(e) => setKnowledgeText(e.target.value)}
-                        placeholder="函数, 导数"
-                    />
-                    {knowledgeText.trim() && (
-                        <div className="flex flex-wrap gap-2">
-                            {knowledgeText
-                                .split(',')
-                                .map((kp) => kp.trim())
-                                .filter((kp) => kp.length > 0)
-                                .map((kp, idx) => (
-                                    <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
-                                        {kp}
+                <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-muted-foreground">难度</label>
+                            <Select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+                                <option value="easy">简单</option>
+                                <option value="medium">中等</option>
+                                <option value="hard">困难</option>
+                            </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-muted-foreground">题型</label>
+                            <Select value={questionType} onChange={(e) => setQuestionType(e.target.value)}>
+                                <option value="choice">选择题</option>
+                                <option value="multi">多选题</option>
+                                <option value="fillblank">填空题</option>
+                                <option value="solve">解答题</option>
+                                <option value="proof">证明题</option>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">题目内容 (Markdown + LaTeX)</label>
+                        <Textarea
+                            value={questionText}
+                            onChange={(e) => setQuestionText(e.target.value)}
+                            className="font-mono text-sm min-h-[120px] resize-y"
+                            placeholder="支持 $...$ 或 $$...$$"
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">选项 (每行一个)</label>
+                        <Textarea
+                            value={optionsText}
+                            onChange={(e) => setOptionsText(e.target.value)}
+                            className="font-mono text-sm min-h-[80px] resize-y"
+                            placeholder="A. 选项内容..."
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">答案与解析</label>
+                        <Textarea
+                            value={answer}
+                            onChange={(e) => setAnswer(e.target.value)}
+                            className="font-mono text-sm min-h-[120px] resize-y"
+                            placeholder="输入详细解析..."
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">知识点 (逗号分隔)</label>
+                        <Input
+                            value={knowledgeText}
+                            onChange={(e) => setKnowledgeText(e.target.value)}
+                            placeholder="函数, 导数, 极值"
+                        />
+                        {knowledgeText.trim() && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {knowledgeText.split(',').filter(k => k.trim()).map((k, i) => (
+                                    <span key={i} className="px-2 py-0.5 bg-secondary text-secondary-foreground text-xs rounded-md">
+                                        {k.trim()}
                                     </span>
                                 ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="pt-4 border-t border-border flex justify-between items-center">
+                        <label className="flex items-center space-x-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+                            <input
+                                type="checkbox"
+                                checked={isPublic}
+                                onChange={(e) => setIsPublic(e.target.checked)}
+                                className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
+                            />
+                            <span>公开到题库</span>
+                        </label>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDownloadPdf}
+                            disabled={isDownloading || !file}
+                            className="text-xs h-8"
+                        >
+                            <Download className="w-3.5 h-3.5 mr-1.5" />
+                            {isDownloading ? '生成中...' : '下载 PDF 预览'}
+                        </Button>
+                    </div>
+
+                    {initialData?.latex && (
+                        <div className="pt-4 border-t border-border space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground">原始 LaTeX</label>
+                            <pre className="p-3 bg-secondary/30 rounded-lg text-[10px] font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap max-h-[100px]">
+                                {initialData.latex}
+                            </pre>
                         </div>
                     )}
                 </div>
-
-                {/* 属性展示 */}
-                <div className="grid grid-cols-3 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">难度</label>
-                        <select
-                            className="mt-1 w-full px-3 py-2 border rounded-md bg-white text-sm"
-                            value={difficulty}
-                            onChange={(e) => setDifficulty(e.target.value)}
-                        >
-                            <option value="easy">easy</option>
-                            <option value="medium">medium</option>
-                            <option value="hard">hard</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">题型</label>
-                        <select
-                            className="mt-1 w-full px-3 py-2 border rounded-md bg-white text-sm"
-                            value={questionType}
-                            onChange={(e) => setQuestionType(e.target.value)}
-                        >
-                            <option value="choice">choice</option>
-                            <option value="multi">multi</option>
-                            <option value="fillblank">fillblank</option>
-                            <option value="solve">solve</option>
-                            <option value="proof">proof</option>
-                        </select>
-                    </div>
-                </div>
-
-                {/* LaTeX 预览 */}
-                {initialData?.latex && (
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">🧪 LaTeX 源码（单题）</label>
-                        <pre className="w-full p-3 border rounded-md bg-gray-50 text-xs overflow-auto max-h-[240px] whitespace-pre-wrap">
-                            {initialData.latex}
-                        </pre>
-                    </div>
-                )}
-            </div>
+            </Card>
         </div>
     );
 }

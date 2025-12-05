@@ -3,6 +3,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { questionApi } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Upload, FileImage, Settings, Loader2, X, RefreshCw } from 'lucide-react';
 
 export interface SimilarQuestion {
     id: string;
@@ -67,6 +70,7 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
     const savePrompt = () => {
         localStorage.setItem('zujuan_custom_prompt', customPrompt);
         setShowPromptEditor(false);
+        // Toast notification would be better here
         alert('提示词已保存');
     };
 
@@ -154,16 +158,6 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
 
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             const file = e.dataTransfer.files[0];
-            // 验证文件类型
-            if (!isValidImageFile(file)) {
-                alert('请拖拽图片文件（JPG、PNG等格式）');
-                return;
-            }
-            // 验证文件大小
-            if (file.size > MAX_FILE_SIZE) {
-                alert('文件大小不能超过 10MB，请压缩后重试');
-                return;
-            }
             await handleFile(file);
         }
     }, [handleFile]);
@@ -178,83 +172,118 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
     }, [handleFile]);
 
     return (
-        <div className="w-full max-w-xl mx-auto space-y-4">
-            {/* 提示词设置按钮 */}
-            <div className="flex justify-end">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowPromptEditor(!showPromptEditor)}
-                    className="text-gray-500 hover:text-gray-700"
-                >
-                    ⚙️ {showPromptEditor ? '收起设置' : 'AI提示词设置'}
-                </Button>
-            </div>
-
-            {/* 提示词编辑器 */}
-            {showPromptEditor && (
-                <div className="border rounded-lg p-4 bg-gray-50 space-y-3">
-                    <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-700">自定义AI提示词</label>
-                        <Button variant="ghost" size="sm" onClick={resetPrompt}>
-                            重置为默认
-                        </Button>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                        提示词会影响AI如何解析和理解题目。JSON格式要求是固定的，这里只修改附加说明部分。
-                    </p>
-                    <textarea
-                        value={customPrompt}
-                        onChange={(e) => setCustomPrompt(e.target.value)}
-                        className="w-full h-40 p-3 text-sm border rounded-md font-mono resize-y"
-                        placeholder="输入自定义提示词..."
-                    />
-                    <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setShowPromptEditor(false)}>
-                            取消
-                        </Button>
-                        <Button size="sm" onClick={savePrompt}>
-                            保存提示词
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {/* 上传区域 */}
-            <div
-                className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-            >
-                <input
-                    type="file"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    onChange={handleChange}
-                    accept="image/*"
-                    disabled={isUploading}
-                />
-
-                <div className="space-y-2">
-                    {isUploading ? (
-                        <div className="text-blue-600">
-                            <p className="font-medium">正在AI分析题目...</p>
-                            <p className="text-sm text-gray-500">识别文字、公式与几何图形</p>
+        <div className="w-full max-w-2xl mx-auto space-y-4">
+            <Card className="p-1 overflow-hidden">
+                <div className="p-4 flex justify-between items-center border-b border-border/50 bg-secondary/20">
+                    <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-primary/10 rounded-lg">
+                            <Upload className="w-4 h-4 text-primary" />
                         </div>
-                    ) : (
-                        <>
-                            <p className="text-lg font-medium text-gray-700">
-                                点击或拖拽上传题目图片
-                            </p>
-                            <p className="text-sm text-gray-500">
-                                支持 JPG, PNG 格式
-                            </p>
-                        </>
-                    )}
+                        <h3 className="font-semibold text-sm">上传题目图片</h3>
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowPromptEditor(!showPromptEditor)}
+                        className={`h-8 text-xs gap-1.5 ${showPromptEditor ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'}`}
+                    >
+                        <Settings className="w-3.5 h-3.5" />
+                        {showPromptEditor ? '收起设置' : 'AI 设置'}
+                    </Button>
                 </div>
-            </div>
+
+                {/* 提示词编辑器 */}
+                {showPromptEditor && (
+                    <div className="p-4 bg-secondary/10 border-b border-border/50 animate-in slide-in-from-top-2 duration-200">
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-medium text-muted-foreground">自定义 AI 提示词</label>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={resetPrompt}
+                                    className="h-6 text-xs hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                    <RefreshCw className="w-3 h-3 mr-1" />
+                                    重置默认
+                                </Button>
+                            </div>
+                            <Textarea
+                                value={customPrompt}
+                                onChange={(e) => setCustomPrompt(e.target.value)}
+                                className="font-mono text-xs min-h-[120px] resize-y bg-background"
+                                placeholder="输入自定义提示词..."
+                            />
+                            <div className="flex justify-end gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setShowPromptEditor(false)} className="h-8">
+                                    取消
+                                </Button>
+                                <Button size="sm" onClick={savePrompt} className="h-8">
+                                    保存设置
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 上传区域 */}
+                <div className="p-6">
+                    <div
+                        className={`
+                            relative group cursor-pointer
+                            flex flex-col items-center justify-center
+                            min-h-[240px] rounded-xl border-2 border-dashed transition-all duration-300
+                            ${dragActive
+                                ? 'border-primary bg-primary/5 scale-[0.99]'
+                                : 'border-border hover:border-primary/50 hover:bg-secondary/20'
+                            }
+                            ${isUploading ? 'pointer-events-none opacity-80' : ''}
+                        `}
+                        onDragEnter={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDragOver={handleDrag}
+                        onDrop={handleDrop}
+                    >
+                        <input
+                            type="file"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                            onChange={handleChange}
+                            accept="image/*"
+                            disabled={isUploading}
+                        />
+
+                        {isUploading ? (
+                            <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300">
+                                <div className="relative">
+                                    <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
+                                    <Loader2 className="w-12 h-12 text-primary animate-spin relative z-10" />
+                                </div>
+                                <div className="text-center space-y-1">
+                                    <p className="font-medium text-foreground">正在智能分析题目...</p>
+                                    <p className="text-xs text-muted-foreground">识别文字、公式与几何图形</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center gap-4 transition-transform duration-300 group-hover:scale-105">
+                                <div className={`
+                                    p-4 rounded-full transition-colors duration-300
+                                    ${dragActive ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'}
+                                `}>
+                                    <FileImage className="w-8 h-8" />
+                                </div>
+                                <div className="text-center space-y-1.5">
+                                    <p className="font-medium text-foreground">
+                                        点击或拖拽上传图片
+                                    </p>
+                                    <p className="text-xs text-muted-foreground max-w-[200px]">
+                                        支持 JPG, PNG 格式，文件大小不超过 10MB
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </Card>
         </div>
     );
 }
