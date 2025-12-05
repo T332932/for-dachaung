@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     secret_key: str = "change-me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    
+    # 注册邀请码（为空则不需要邀请码）
+    invite_code: Optional[str] = None
 
     class Config:
         env_file = ".env"

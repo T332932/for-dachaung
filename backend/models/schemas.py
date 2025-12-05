@@ -142,6 +142,9 @@ class UserCreateRequest(BaseModel):
     password: str
     email: Optional[str] = None
     role: Literal["teacher", "student", "admin"] = "teacher"
+    inviteCode: Optional[str] = None  # 邀请码
+    captchaId: Optional[str] = None   # 验证码 ID
+    captchaCode: Optional[str] = None # 验证码答案
 
 
 class LoginRequest(BaseModel):

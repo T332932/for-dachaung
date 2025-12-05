@@ -18,7 +18,7 @@ export default function Home() {
   const handleSave = useCallback((savedData: QuestionAnalysisResult) => {
     // 保存成功，跳转到成功页面
     if (process.env.NODE_ENV === 'development') {
-      console.log('Saved:', savedData);
+    console.log('Saved:', savedData);
     }
     setStep('success');
   }, []);

@@ -119,6 +119,12 @@ api.interceptors.request.use(
 
 // ============ 认证相关 API ============
 export const authApi = {
+  // 获取验证码
+  getCaptcha: async (): Promise<{ captchaId: string; captchaImage: string }> => {
+    const response = await api.get('/auth/captcha');
+    return response.data;
+  },
+
   // 登录
   login: async (username: string, password: string): Promise<{ access_token: string }> => {
     const response = await api.post('/auth/login', { username, password });
@@ -130,7 +136,15 @@ export const authApi = {
   },
 
   // 注册
-  register: async (data: { username: string; password: string; email?: string; role?: string }): Promise<{
+  register: async (data: {
+    username: string;
+    password: string;
+    email?: string;
+    role?: string;
+    inviteCode?: string;
+    captchaId?: string;
+    captchaCode?: string;
+  }): Promise<{
     id: string;
     username: string;
     email?: string;
