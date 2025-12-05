@@ -65,11 +65,12 @@ async def preview_question(
     include_explanation: bool = Query(False),
     custom_prompt: str = Query(None, description="自定义提示词（可选）"),
     ai_service: AIService = Depends(get_ai_service),
+    db: Session = Depends(get_db),
     background_tasks: BackgroundTasks = None,
 ):
     """
     单题预览：上传图片 → AI 解析 → 生成 LaTeX，并可选编译 PDF。
-    - format=json: 返回解析结果 + latex 文本 + svg 的 PNG base64 预览。
+    - format=json: 返回解析结果 + latex 文本 + svg 的 PNG base64 预览 + 相似题列表。
     - format=pdf: 返回编译好的 PDF 文件。
     - custom_prompt: 自定义提示词（可选）
     """
@@ -94,11 +95,36 @@ async def preview_question(
 
     # 默认 json：返回结构化数据 + latex + PNG 预览（如可用）
     svg_png = export_service.svg_to_png_base64(analysis.get("geometrySvg")) if analysis.get("hasGeometry") else None
+    
+    # 查重：用题目+答案进行语义搜索，找出相似题
+    similar_questions = []
+    question_text = analysis.get("questionText") or ""
+    answer_text = analysis.get("answer") or ""
+    if question_text and rag_service.client:
+        # 拼接题目和答案进行搜索
+        search_text = f"{question_text}\n{answer_text}"
+        try:
+            similar_results = await rag_service.search_similar(db, search_text, top_k=3)
+            # 只返回相似度 > 0.85 的题目
+            similar_questions = [
+                {
+                    "id": r["id"],
+                    "questionText": (r["questionText"] or "")[:200] + "..." if len(r.get("questionText") or "") > 200 else r.get("questionText"),
+                    "similarity": r["similarity"],
+                    "difficulty": r.get("difficulty"),
+                }
+                for r in similar_results if r.get("similarity", 0) > 0.85
+            ]
+        except Exception:
+            pass  # 查重失败不影响主流程
+    
     return {
         "analysis": analysis,
         "latex": latex,
         "svgPng": svg_png,
+        "similarQuestions": similar_questions,  # 相似题列表
     }
+
 
 
 @router.post("/questions/ingest", response_model=QuestionCreateResponse)

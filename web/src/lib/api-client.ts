@@ -116,11 +116,12 @@ export const questionApi = {
     return response.data;
   },
 
-  // 上传并生成预览（解析 + latex + svg png）
+  // 上传并生成预览（解析 + latex + svg png + 相似题）
   preview: async (file: File, opts?: { includeAnswer?: boolean; includeExplanation?: boolean; customPrompt?: string }): Promise<{
     analysis?: Record<string, unknown>;
     latex?: string;
     svgPng?: string | null;
+    similarQuestions?: Array<{ id: string; questionText: string; similarity: number; difficulty?: string }>;
   }> => {
     const formData = new FormData();
     formData.append('file', file);

@@ -4,6 +4,13 @@ import { useState, useCallback, useEffect } from 'react';
 import { questionApi } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 
+export interface SimilarQuestion {
+    id: string;
+    questionText: string;
+    similarity: number;
+    difficulty?: string;
+}
+
 export interface QuestionAnalysisResult {
     questionText?: string;
     options?: string[] | null;
@@ -16,6 +23,7 @@ export interface QuestionAnalysisResult {
     difficulty?: string | null;
     questionType?: string | null;
     confidence?: number | null;
+    similarQuestions?: SimilarQuestion[];  // 相似题列表
 }
 
 // 文件大小限制常量
@@ -121,6 +129,7 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
                 ...analysisData,
                 svgPng: result?.svgPng || null,
                 latex: result?.latex,
+                similarQuestions: result?.similarQuestions || [],
             };
 
             // 验证必要字段

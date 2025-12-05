@@ -376,8 +376,26 @@ class ExportService:
         except Exception:
             return None
 
+        # 获取画布大小用于翻转 y 轴
+        width, height = 400.0, 400.0
+        viewbox = root.get("viewBox")
+        if viewbox:
+            parts = viewbox.replace(",", " ").split()
+            if len(parts) == 4:
+                try:
+                    width = float(parts[2])
+                    height = float(parts[3])
+                except Exception:
+                    pass
+        else:
+            try:
+                width = float((root.get("width") or "400").replace("px", ""))
+                height = float((root.get("height") or "400").replace("px", ""))
+            except Exception:
+                pass
+
         cmds: List[str] = []
-        scale = 0.02  # 将 400x400 缩放到约 8x8
+        scale = 0.03  # 将 400x400 缩放到约 12x12
 
         def fmt(coord: str | None) -> float:
             try:
@@ -385,26 +403,53 @@ class ExportService:
             except Exception:
                 return 0.0
 
+        def flip_y(y: float) -> float:
+            return (height - y) * scale
+
+        def is_dashed(el: ET.Element) -> bool:
+            style = el.get("style", "")
+            cls = el.get("class", "")
+            dasharray = el.get("stroke-dasharray", "")
+            return ("dash" in style) or ("dash" in cls) or (dasharray not in ("", None))
+
+        def parse_path(d: str) -> List[tuple[float, float]]:
+            import re
+            pts = []
+            parts = re.findall(r'[ML]\s*([-\d.]+)\s+([-\d.]+)', d or "", re.IGNORECASE)
+            for x, y in parts:
+                try:
+                    pts.append((float(x), float(y)))
+                except Exception:
+                    continue
+            return pts
+
         for el in root.iter():
             tag = el.tag.split("}")[-1].lower()
+            dashed = "[dashed]" if is_dashed(el) else ""
             if tag == "line":
-                x1, y1 = fmt(el.get("x1")) * scale, fmt(el.get("y1")) * scale
-                x2, y2 = fmt(el.get("x2")) * scale, fmt(el.get("y2")) * scale
-                cmds.append(r"\draw (%.3f,%.3f) -- (%.3f,%.3f);" % (x1, -y1, x2, -y2))
+                x1, y1 = fmt(el.get("x1")), fmt(el.get("y1"))
+                x2, y2 = fmt(el.get("x2")), fmt(el.get("y2"))
+                cmds.append(r"\draw%s (%.3f,%.3f) -- (%.3f,%.3f);" % (dashed, x1 * scale, flip_y(y1), x2 * scale, flip_y(y2)))
             elif tag == "circle":
-                cx, cy = fmt(el.get("cx")) * scale, fmt(el.get("cy")) * scale
-                r = fmt(el.get("r")) * scale
-                cmds.append(r"\draw (%.3f,%.3f) circle (%.3f);" % (cx, -cy, r))
+                cx, cy = fmt(el.get("cx")), fmt(el.get("cy"))
+                r = fmt(el.get("r"))
+                cmds.append(r"\draw%s (%.3f,%.3f) circle (%.3f);" % (dashed, cx * scale, flip_y(cy), r * scale))
             elif tag == "ellipse":
-                cx, cy = fmt(el.get("cx")) * scale, fmt(el.get("cy")) * scale
-                rx, ry = fmt(el.get("rx")) * scale, fmt(el.get("ry")) * scale
-                cmds.append(r"\draw (%.3f,%.3f) ellipse (%.3f and %.3f);" % (cx, -cy, rx, ry))
+                cx, cy = fmt(el.get("cx")), fmt(el.get("cy"))
+                rx, ry = fmt(el.get("rx")), fmt(el.get("ry"))
+                cmds.append(r"\draw%s (%.3f,%.3f) ellipse (%.3f and %.3f);" % (dashed, cx * scale, flip_y(cy), rx * scale, ry * scale))
+            elif tag == "path":
+                pts = parse_path(el.get("d") or "")
+                if len(pts) >= 2:
+                    coords = " -- ".join(["(%.3f,%.3f)" % (x * scale, flip_y(y)) for x, y in pts])
+                    cmds.append(r"\draw%s %s;" % (dashed, coords))
             elif tag == "text":
-                x, y = fmt(el.get("x")) * scale, fmt(el.get("y")) * scale
+                x, y = fmt(el.get("x")), fmt(el.get("y"))
+                dx = fmt(el.get("dx"))
+                dy = fmt(el.get("dy"))
                 txt = (el.text or "").strip()
                 if txt:
-                    cmds.append(r"\node at (%.3f,%.3f) {%s};" % (x, -y, self._escape_latex(txt)))
-            # path 等复杂元素暂不处理
+                    cmds.append(r"\node at (%.3f,%.3f) {%s};" % ((x + dx) * scale, flip_y(y + dy), self._escape_latex(txt)))
 
         if not cmds:
             return None

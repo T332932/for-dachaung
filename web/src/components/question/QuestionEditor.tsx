@@ -227,6 +227,45 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
                 </div>
             </div>
 
+            {/* 相似题警告 */}
+            {initialData.similarQuestions && initialData.similarQuestions.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                        <span className="text-amber-600 text-xl">⚠️</span>
+                        <div className="flex-1">
+                            <h4 className="font-medium text-amber-800 mb-2">
+                                发现 {initialData.similarQuestions.length} 道相似题目
+                            </h4>
+                            <p className="text-sm text-amber-700 mb-3">
+                                题库中已存在高度相似的题目，请确认是否需要入库：
+                            </p>
+                            <div className="space-y-2">
+                                {initialData.similarQuestions.map((sq, idx) => (
+                                    <div key={sq.id} className="bg-white rounded p-3 border border-amber-100">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className="text-xs text-amber-600 font-medium">
+                                                相似度: {Math.round(sq.similarity * 100)}%
+                                            </span>
+                                            {sq.difficulty && (
+                                                <span className="text-xs text-gray-500">
+                                                    难度: {sq.difficulty}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-gray-700 line-clamp-2">
+                                            {sq.questionText}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-xs text-amber-600 mt-3">
+                                💡 如果确认是同一道题，建议点击"重新上传"选择其他题目
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 gap-6">
                 {/* 几何图形预览 */}
                 {initialData?.hasGeometry && ((typeof initialData?.svgPng === 'string' && initialData.svgPng.startsWith('data:image')) || initialData?.geometrySvg) && (
