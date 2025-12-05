@@ -1,30 +1,31 @@
 @import "tailwindcss";
+@plugin "tailwindcss-animate";
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  
+
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  
+
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  
+
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -33,8 +34,10 @@
 @import "katex/dist/katex.min.css";
 
 :root {
-  --background: #f8fafc; /* Slate-50 */
-  --foreground: #0f172a; /* Slate-900 */
+  --background: #f8fafc;
+  /* Slate-50 */
+  --foreground: #0f172a;
+  /* Slate-900 */
 
   --card: #ffffff;
   --card-foreground: #0f172a;
@@ -42,22 +45,28 @@
   --popover: #ffffff;
   --popover-foreground: #0f172a;
 
-  --primary: #4f46e5; /* Indigo-600 */
+  --primary: #4f46e5;
+  /* Indigo-600 */
   --primary-foreground: #ffffff;
 
-  --secondary: #f1f5f9; /* Slate-100 */
+  --secondary: #f1f5f9;
+  /* Slate-100 */
   --secondary-foreground: #0f172a;
 
   --muted: #f1f5f9;
-  --muted-foreground: #64748b; /* Slate-500 */
+  --muted-foreground: #64748b;
+  /* Slate-500 */
 
-  --accent: #f59e0b; /* Amber-500 */
+  --accent: #f59e0b;
+  /* Amber-500 */
   --accent-foreground: #ffffff;
 
-  --destructive: #ef4444; /* Red-500 */
+  --destructive: #ef4444;
+  /* Red-500 */
   --destructive-foreground: #ffffff;
 
-  --border: #e2e8f0; /* Slate-200 */
+  --border: #e2e8f0;
+  /* Slate-200 */
   --input: #e2e8f0;
   --ring: #4f46e5;
 
@@ -66,28 +75,36 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #020617; /* Slate-950 */
-    --foreground: #f8fafc; /* Slate-50 */
+    --background: #020617;
+    /* Slate-950 */
+    --foreground: #f8fafc;
+    /* Slate-50 */
 
-    --card: #0f172a; /* Slate-900 */
+    --card: #0f172a;
+    /* Slate-900 */
     --card-foreground: #f8fafc;
 
     --popover: #0f172a;
     --popover-foreground: #f8fafc;
 
-    --primary: #6366f1; /* Indigo-500 */
+    --primary: #6366f1;
+    /* Indigo-500 */
     --primary-foreground: #ffffff;
 
-    --secondary: #1e293b; /* Slate-800 */
+    --secondary: #1e293b;
+    /* Slate-800 */
     --secondary-foreground: #f8fafc;
 
     --muted: #1e293b;
-    --muted-foreground: #94a3b8; /* Slate-400 */
+    --muted-foreground: #94a3b8;
+    /* Slate-400 */
 
-    --accent: #fbbf24; /* Amber-400 */
+    --accent: #fbbf24;
+    /* Amber-400 */
     --accent-foreground: #0f172a;
 
-    --destructive: #f87171; /* Red-400 */
+    --destructive: #f87171;
+    /* Red-400 */
     --destructive-foreground: #ffffff;
 
     --border: #1e293b;
@@ -119,6 +136,6 @@ body {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  background-image: linear-gradient(to right, var(--primary), #8b5cf6); /* Indigo to Violet */
+  background-image: linear-gradient(to right, var(--primary), #8b5cf6);
+  /* Indigo to Violet */
 }
-

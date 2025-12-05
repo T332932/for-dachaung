@@ -10,6 +10,7 @@ import { questionApi, QuestionPayload } from '@/lib/api-client';
 import { QuestionAnalysisResult } from './QuestionUploader';
 import { MathText } from '@/components/ui/MathText';
 import { Save, Download, RotateCcw, Eye, Edit3, AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface QuestionEditorProps {
     initialData: QuestionAnalysisResult;
@@ -46,11 +47,11 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
     const handleSubmit = async () => {
         if (isSaving) return;
         if (!questionText.trim()) {
-            alert('题目内容不能为空');
+            toast.error('题目内容不能为空');
             return;
         }
         if (!answer.trim()) {
-            alert('答案不能为空');
+            toast.error('答案不能为空');
             return;
         }
 
@@ -88,6 +89,7 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
             await questionApi.create(payload);
 
             if (isMountedRef.current) {
+                toast.success('题目入库成功');
                 onSave({
                     ...initialData,
                     questionText: payload.questionText,
@@ -102,7 +104,7 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
             if (isMountedRef.current) {
                 console.error('Save failed:', error);
                 const errorMessage = error?.userMessage || error?.response?.data?.detail || error?.message || '保存失败，请重试';
-                alert(errorMessage);
+                toast.error(errorMessage);
             }
         } finally {
             if (isMountedRef.current) setIsSaving(false);
@@ -112,7 +114,7 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
     const handleDownloadPdf = async () => {
         if (isDownloading) return;
         if (!file) {
-            alert('缺少原始文件，无法生成 PDF 预览');
+            toast.error('缺少原始文件，无法生成 PDF 预览');
             return;
         }
         setIsDownloading(true);
@@ -139,7 +141,7 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
             if (!isMountedRef.current) return;
             console.error('PDF preview failed:', error);
             if (blobUrl) window.URL.revokeObjectURL(blobUrl);
-            alert(error?.userMessage || 'PDF 预览失败');
+            toast.error(error?.userMessage || 'PDF 预览失败');
         } finally {
             if (isMountedRef.current) setIsDownloading(false);
         }

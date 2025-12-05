@@ -8,29 +8,29 @@ import { authApi } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AuthLayout } from '@/components/layout/AuthLayout';
+import { toast } from 'sonner';
 
 export default function LoginPage() {
     const router = useRouter();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
 
         if (!username.trim() || !password.trim()) {
-            setError('请输入用户名和密码');
+            toast.error('请输入用户名和密码');
             return;
         }
 
         setLoading(true);
         try {
             await authApi.login(username, password);
+            toast.success('登录成功');
             router.push('/');
         } catch (err: any) {
-            setError(err?.userMessage || '登录失败，请检查用户名和密码');
+            toast.error(err?.userMessage || '登录失败，请检查用户名和密码');
         } finally {
             setLoading(false);
         }
@@ -42,11 +42,6 @@ export default function LoginPage() {
             subtitle="请输入您的账号密码登录系统"
         >
             <form onSubmit={handleSubmit} className="space-y-6">
-                {error && (
-                    <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm font-medium flex items-center animate-in slide-in-from-top-2">
-                        <span className="mr-2">⚠️</span> {error}
-                    </div>
-                )}
 
                 <div className="space-y-4">
                     <Input

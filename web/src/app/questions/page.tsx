@@ -11,6 +11,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Question {
     id: string;
@@ -207,9 +208,22 @@ export default function QuestionsPage() {
 
                 {/* 题目列表 */}
                 {loading ? (
-                    <div className="text-center py-20">
-                        <RefreshCw className="w-8 h-8 animate-spin mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">正在加载题目...</p>
+                    <div className="grid gap-4">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <Card key={i} className="p-5">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex gap-2">
+                                        <Skeleton className="h-5 w-12 rounded-full" />
+                                        <Skeleton className="h-5 w-12 rounded-full" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-full" />
+                                    <Skeleton className="h-4 w-3/4" />
+                                    <Skeleton className="h-4 w-1/2" />
+                                </div>
+                            </Card>
+                        ))}
                     </div>
                 ) : questions.length === 0 ? (
                     <div className="text-center py-20 bg-secondary/30 rounded-2xl border border-dashed border-border">

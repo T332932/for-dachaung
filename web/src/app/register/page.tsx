@@ -8,6 +8,7 @@ import { authApi } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AuthLayout } from '@/components/layout/AuthLayout';
+import { toast } from 'sonner';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -18,8 +19,8 @@ export default function RegisterPage() {
     const [inviteCode, setInviteCode] = useState('');
     const [captchaId, setCaptchaId] = useState('');
     const [captchaImage, setCaptchaImage] = useState('');
+
     const [captchaCode, setCaptchaCode] = useState('');
-    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     // 加载验证码
@@ -40,25 +41,24 @@ export default function RegisterPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
 
         if (!username.trim() || !password.trim()) {
-            setError('请输入用户名和密码');
+            toast.error('请输入用户名和密码');
             return;
         }
 
         if (password !== confirmPassword) {
-            setError('两次输入的密码不一致');
+            toast.error('两次输入的密码不一致');
             return;
         }
 
         if (password.length < 6) {
-            setError('密码长度至少为6位');
+            toast.error('密码长度至少为6位');
             return;
         }
 
         if (!captchaCode.trim()) {
-            setError('请输入验证码');
+            toast.error('请输入验证码');
             return;
         }
 
@@ -73,10 +73,10 @@ export default function RegisterPage() {
                 captchaId,
                 captchaCode,
             });
-            alert('注册成功！请登录');
+            toast.success('注册成功！请登录');
             router.push('/login');
         } catch (err: any) {
-            setError(err?.userMessage || err?.response?.data?.detail || err?.message || '注册失败');
+            toast.error(err?.userMessage || err?.response?.data?.detail || err?.message || '注册失败');
             loadCaptcha();
         } finally {
             setLoading(false);
@@ -89,11 +89,6 @@ export default function RegisterPage() {
             subtitle="加入智能组卷系统，开启高效教学"
         >
             <form onSubmit={handleSubmit} className="space-y-5">
-                {error && (
-                    <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm font-medium flex items-center animate-in slide-in-from-top-2">
-                        <span className="mr-2">⚠️</span> {error}
-                    </div>
-                )}
 
                 <div className="grid grid-cols-1 gap-4">
                     <Input

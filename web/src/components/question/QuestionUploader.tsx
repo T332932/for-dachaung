@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Upload, FileImage, Settings, Loader2, X, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 export interface SimilarQuestion {
     id: string;
@@ -70,8 +71,7 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
     const savePrompt = () => {
         localStorage.setItem('zujuan_custom_prompt', customPrompt);
         setShowPromptEditor(false);
-        // Toast notification would be better here
-        alert('提示词已保存');
+        toast.success('提示词已保存');
     };
 
     // 重置为默认提示词
@@ -102,13 +102,13 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
 
         // 验证文件类型
         if (!isValidImageFile(file)) {
-            alert('请上传图片文件（JPG、PNG等格式）');
+            toast.error('请上传图片文件（JPG、PNG等格式）');
             return;
         }
 
         // 验证文件大小
         if (file.size > MAX_FILE_SIZE) {
-            alert('文件大小不能超过 10MB，请压缩后重试');
+            toast.error('文件大小不能超过 10MB，请压缩后重试');
             return;
         }
 
@@ -145,7 +145,7 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
         } catch (error: any) {
             console.error('Analysis failed:', error);
             const errorMessage = error?.userMessage || error?.message || '题目识别失败，请重试';
-            alert(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setIsUploading(false);
         }
