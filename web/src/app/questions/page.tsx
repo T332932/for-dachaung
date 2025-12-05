@@ -1,9 +1,16 @@
+
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { Search, Filter, RefreshCw } from 'lucide-react';
 import { questionApi } from '@/lib/api-client';
 import { MathText } from '@/components/ui/MathText';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 
 interface Question {
     id: string;
@@ -25,7 +32,7 @@ export default function QuestionsPage() {
     const [filters, setFilters] = useState({
         difficulty: '',
         questionType: '',
-        includePublic: true,  // 默认包含公共题
+        includePublic: true,
     });
 
     // 加载题目列表
@@ -88,48 +95,44 @@ export default function QuestionsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="bg-white shadow-sm sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-                    <Link href="/" className="text-xl font-bold text-gray-800">📚 题库</Link>
+        <DashboardLayout>
+            <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground">题库浏览</h1>
+                        <p className="text-muted-foreground">管理和检索所有题目资源</p>
+                    </div>
                     <div className="flex gap-3">
-                        <Link href="/papers/create" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                            创建试卷
+                        <Link href="/">
+                            <Button variant="outline">上传题目</Button>
                         </Link>
-                        <Link href="/" className="px-4 py-2 border rounded-lg hover:bg-gray-50 transition">
-                            上传题目
+                        <Link href="/papers/create">
+                            <Button>创建试卷</Button>
                         </Link>
                     </div>
                 </div>
-            </header>
 
-            <main className="max-w-7xl mx-auto px-4 py-6">
                 {/* 搜索和筛选 */}
-                <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-                    <div className="flex flex-wrap gap-4 items-end">
-                        <div className="flex-1 min-w-[300px]">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">搜索题目</label>
+                <Card className="p-4">
+                    <div className="flex flex-col md:flex-row gap-4 items-end">
+                        <div className="flex-1 w-full">
+                            <label className="block text-sm font-medium text-muted-foreground mb-1">搜索题目</label>
                             <div className="flex gap-2">
-                                <input
-                                    type="text"
+                                <Input
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="输入关键词或描述，如：二次函数求最值"
-                                    className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     onKeyDown={(e) => e.key === 'Enter' && handleSemanticSearch()}
+                                    leftIcon={<Search className="w-4 h-4" />}
                                 />
-                                <button
-                                    onClick={handleSemanticSearch}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                                >
-                                    🔍 语义搜索
-                                </button>
+                                <Button onClick={handleSemanticSearch}>
+                                    语义搜索
+                                </Button>
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">难度</label>
+                        <div className="w-full md:w-auto">
+                            <label className="block text-sm font-medium text-muted-foreground mb-1">难度</label>
                             <select
                                 value={filters.difficulty}
                                 onChange={(e) => {
@@ -137,17 +140,17 @@ export default function QuestionsPage() {
                                     setPage(1);
                                     setSearchMode('list');
                                 }}
-                                className="px-3 py-2 border rounded-lg"
+                                className="w-full h-11 px-3 py-2 rounded-xl border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
-                                <option value="">全部</option>
+                                <option value="">全部难度</option>
                                 <option value="easy">简单</option>
                                 <option value="medium">中等</option>
                                 <option value="hard">困难</option>
                             </select>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">题型</label>
+                        <div className="w-full md:w-auto">
+                            <label className="block text-sm font-medium text-muted-foreground mb-1">题型</label>
                             <select
                                 value={filters.questionType}
                                 onChange={(e) => {
@@ -155,9 +158,9 @@ export default function QuestionsPage() {
                                     setPage(1);
                                     setSearchMode('list');
                                 }}
-                                className="px-3 py-2 border rounded-lg"
+                                className="w-full h-11 px-3 py-2 rounded-xl border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
-                                <option value="">全部</option>
+                                <option value="">全部题型</option>
                                 <option value="choice">选择题</option>
                                 <option value="fillblank">填空题</option>
                                 <option value="solve">解答题</option>
@@ -166,18 +169,20 @@ export default function QuestionsPage() {
                         </div>
 
                         {searchMode === 'semantic' && (
-                            <button
+                            <Button
+                                variant="ghost"
                                 onClick={() => {
                                     setSearchMode('list');
                                     setSearchQuery('');
                                 }}
-                                className="px-4 py-2 text-gray-600 hover:text-gray-800"
                             >
                                 清除搜索
-                            </button>
+                            </Button>
                         )}
+                    </div>
 
-                        <label className="flex items-center space-x-2 text-sm text-gray-600 ml-4">
+                    <div className="mt-4 flex items-center justify-between">
+                        <label className="flex items-center space-x-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
                             <input
                                 type="checkbox"
                                 checked={filters.includePublic}
@@ -186,91 +191,102 @@ export default function QuestionsPage() {
                                     setPage(1);
                                     setSearchMode('list');
                                 }}
-                                className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                                className="w-4 h-4 text-primary rounded border-input focus:ring-primary"
                             />
-                            <span>包含公共题</span>
+                            <span>包含公共题库</span>
                         </label>
-                    </div>
 
-                    {searchMode === 'semantic' && (
-                        <div className="mt-3 text-sm text-blue-600">
-                            🔍 语义搜索模式：显示与"{searchQuery}"最相关的题目
-                        </div>
-                    )}
-                </div>
+                        {searchMode === 'semantic' && (
+                            <div className="text-sm text-primary flex items-center gap-1">
+                                <Search className="w-3 h-3" />
+                                语义搜索模式：显示与"{searchQuery}"最相关的题目
+                            </div>
+                        )}
+                    </div>
+                </Card>
 
                 {/* 题目列表 */}
                 {loading ? (
-                    <div className="text-center py-12 text-gray-500">加载中...</div>
+                    <div className="text-center py-20">
+                        <RefreshCw className="w-8 h-8 animate-spin mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">正在加载题目...</p>
+                    </div>
                 ) : questions.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
-                        <p className="text-lg">暂无题目</p>
-                        <p className="mt-2">请先 <Link href="/" className="text-blue-600 hover:underline">上传题目</Link></p>
+                    <div className="text-center py-20 bg-secondary/30 rounded-2xl border border-dashed border-border">
+                        <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Search className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-lg font-medium text-foreground">暂无题目</h3>
+                        <p className="text-muted-foreground mt-1">
+                            没有找到相关题目，试着调整筛选条件或 <Link href="/" className="text-primary hover:underline">上传新题目</Link>
+                        </p>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="grid gap-4">
                         {questions.map((q) => (
-                            <div key={q.id} className="bg-white rounded-lg shadow-sm p-5 hover:shadow-md transition">
+                            <Card key={q.id} hover className="p-5 group">
                                 <div className="flex justify-between items-start mb-3">
                                     <div className="flex gap-2 flex-wrap">
-                                        <span className={`px-2 py-1 text-xs rounded ${q.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                                            q.difficulty === 'hard' ? 'bg-red-100 text-red-700' :
-                                                'bg-yellow-100 text-yellow-700'
+                                        <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${q.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                            q.difficulty === 'hard' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                                                'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                                             }`}>
                                             {difficultyLabel(q.difficulty)}
                                         </span>
-                                        <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
+                                        <span className="px-2.5 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
                                             {typeLabel(q.questionType)}
                                         </span>
                                         {q.similarity !== undefined && (
-                                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
+                                            <span className="px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
                                                 相似度: {Math.round(q.similarity * 100)}%
                                             </span>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="prose prose-sm max-w-none mb-3">
+                                <div className="prose prose-sm max-w-none mb-4 text-foreground/90">
                                     <MathText>{(q.questionText || '').slice(0, 300) + ((q.questionText?.length || 0) > 300 ? '...' : '')}</MathText>
                                 </div>
 
                                 {q.knowledgePoints && q.knowledgePoints.length > 0 && (
-                                    <div className="flex gap-1 flex-wrap">
+                                    <div className="flex gap-1.5 flex-wrap pt-3 border-t border-border/50">
                                         {q.knowledgePoints.slice(0, 5).map((kp, i) => (
-                                            <span key={i} className="px-2 py-0.5 text-xs bg-indigo-50 text-indigo-600 rounded">
-                                                {kp}
+                                            <span key={i} className="px-2 py-0.5 text-xs bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-300 rounded border border-indigo-100 dark:border-indigo-900/30">
+                                                # {kp}
                                             </span>
                                         ))}
                                     </div>
                                 )}
-                            </div>
+                            </Card>
                         ))}
                     </div>
                 )}
 
                 {/* 分页 */}
                 {searchMode === 'list' && totalPages > 1 && (
-                    <div className="flex justify-center gap-2 mt-6">
-                        <button
+                    <div className="flex justify-center gap-2 mt-8">
+                        <Button
+                            variant="outline"
                             onClick={() => setPage(p => Math.max(1, p - 1))}
                             disabled={page === 1}
-                            className="px-4 py-2 border rounded-lg disabled:opacity-50"
                         >
                             上一页
-                        </button>
-                        <span className="px-4 py-2 text-gray-600">
+                        </Button>
+                        <div className="flex items-center px-4 text-sm font-medium text-muted-foreground">
                             第 {page} / {totalPages} 页
-                        </span>
-                        <button
+                        </div>
+                        <Button
+                            variant="outline"
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                             disabled={page === totalPages}
-                            className="px-4 py-2 border rounded-lg disabled:opacity-50"
                         >
                             下一页
-                        </button>
+                        </Button>
                     </div>
                 )}
-            </main>
-        </div>
+            </div>
+        </DashboardLayout>
     );
 }
+

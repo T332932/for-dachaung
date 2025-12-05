@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { QuestionUploader, QuestionAnalysisResult } from '@/components/question/QuestionUploader';
 import { QuestionEditor } from '@/components/question/QuestionEditor';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Card } from '@/components/ui/card';
 
 export default function Home() {
   const [step, setStep] = useState<'upload' | 'edit' | 'success'>('upload');
@@ -16,9 +18,8 @@ export default function Home() {
   }, []);
 
   const handleSave = useCallback((savedData: QuestionAnalysisResult) => {
-    // 保存成功，跳转到成功页面
     if (process.env.NODE_ENV === 'development') {
-    console.log('Saved:', savedData);
+      console.log('Saved:', savedData);
     }
     setStep('success');
   }, []);
@@ -35,21 +36,21 @@ export default function Home() {
   }, [step]);
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900">
-            AI 智能组卷平台
+    <DashboardLayout>
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            题目上传
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="text-muted-foreground">
             上传题目图片，AI 自动识别并结构化，一键存入题库
           </p>
         </div>
 
         {step === 'upload' && (
-          <div className="bg-white p-8 rounded-xl shadow-sm">
+          <Card className="p-8">
             <QuestionUploader onAnalyzed={handleAnalyzed} />
-          </div>
+          </Card>
         )}
 
         {step === 'edit' && currentQuestion && (
@@ -66,7 +67,7 @@ export default function Home() {
         )}
 
         {step === 'success' && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center animate-in fade-in zoom-in duration-300">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
               <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -79,6 +80,6 @@ export default function Home() {
           </div>
         )}
       </div>
-    </main>
+    </DashboardLayout>
   );
 }

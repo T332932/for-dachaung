@@ -1,10 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { questionApi, paperApi } from '@/lib/api-client';
 import { MathText } from '@/components/ui/MathText';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Search, Plus, Trash2, ArrowUp, ArrowDown, Save, FileText, Clock, Calculator, BookOpen } from 'lucide-react';
 
 interface Question {
     id: string;
@@ -159,221 +163,230 @@ export default function CreatePaperPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="bg-white shadow-sm sticky top-0 z-20">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <Link href="/" className="text-xl font-bold text-gray-800">📝 创建试卷</Link>
+        <DashboardLayout>
+            <div className="space-y-6 h-[calc(100vh-100px)] flex flex-col">
+                <div className="flex justify-between items-center shrink-0">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground">创建试卷</h1>
+                        <p className="text-muted-foreground">自由组卷模式，从题库中挑选题目</p>
                     </div>
                     <div className="flex gap-3">
-                        <Link href="/questions" className="px-4 py-2 border rounded-lg hover:bg-gray-50">
-                            题库
-                        </Link>
-                        <button
+                        <Button
                             onClick={handleSubmit}
                             disabled={submitting || selectedQuestions.length === 0}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                            className="gap-2"
                         >
-                            {submitting ? '创建中...' : '创建试卷'}
-                        </button>
+                            {submitting ? '创建中...' : (
+                                <>
+                                    <Save className="w-4 h-4" />
+                                    完成创建
+                                </>
+                            )}
+                        </Button>
                     </div>
                 </div>
-            </header>
 
-            <main className="max-w-7xl mx-auto px-4 py-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
                     {/* 左侧：搜索选题 */}
-                    <div className="bg-white rounded-lg shadow-sm p-5">
-                        <h2 className="text-lg font-semibold mb-4">🔍 搜索题目</h2>
+                    <Card className="flex flex-col h-full overflow-hidden">
+                        <div className="p-5 border-b border-border shrink-0">
+                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <Search className="w-5 h-5 text-primary" />
+                                搜索题目
+                            </h2>
 
-                        <div className="flex gap-2 mb-4">
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="输入关键词语义搜索，如：三角函数"
-                                className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                            />
-                            <button
-                                onClick={handleSearch}
-                                disabled={searching}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                            >
-                                搜索
-                            </button>
-                            <button
-                                onClick={loadQuestionList}
-                                disabled={searching}
-                                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                            >
-                                全部
-                            </button>
+                            <div className="flex gap-2">
+                                <Input
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="输入关键词语义搜索，如：三角函数"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                    className="flex-1"
+                                />
+                                <Button
+                                    onClick={handleSearch}
+                                    disabled={searching}
+                                >
+                                    搜索
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={loadQuestionList}
+                                    disabled={searching}
+                                >
+                                    全部
+                                </Button>
+                            </div>
                         </div>
 
-                        <div className="max-h-[60vh] overflow-y-auto space-y-3">
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-secondary/10">
                             {searching ? (
-                                <div className="text-center py-8 text-gray-500">搜索中...</div>
+                                <div className="text-center py-12 text-muted-foreground">搜索中...</div>
                             ) : searchResults.length === 0 ? (
-                                <div className="text-center py-8 text-gray-500">
+                                <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-2">
+                                    <BookOpen className="w-8 h-8 opacity-20" />
                                     输入关键词搜索题目，或点击"全部"加载题库
                                 </div>
                             ) : (
                                 searchResults.map((q) => (
-                                    <div key={q.id} className="border rounded-lg p-3 hover:border-blue-300 transition">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="flex gap-1">
-                                                <span className={`px-2 py-0.5 text-xs rounded ${q.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                                                        q.difficulty === 'hard' ? 'bg-red-100 text-red-700' :
-                                                            'bg-yellow-100 text-yellow-700'
+                                    <div key={q.id} className="bg-card border border-border rounded-xl p-4 hover:border-primary/50 transition-colors group">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex gap-2 items-center">
+                                                <span className={`px-2 py-0.5 text-xs rounded-md font-medium ${q.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                        q.difficulty === 'hard' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                                                            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                                                     }`}>
                                                     {difficultyLabel(q.difficulty)}
                                                 </span>
                                                 {q.similarity !== undefined && (
-                                                    <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                                                    <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-md">
                                                         {Math.round(q.similarity * 100)}%
                                                     </span>
                                                 )}
                                             </div>
-                                            <button
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
                                                 onClick={() => addQuestion(q)}
-                                                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                                                className="h-7 px-2 text-xs hover:bg-primary hover:text-primary-foreground"
                                             >
-                                                + 添加
-                                            </button>
+                                                <Plus className="w-3 h-3 mr-1" />
+                                                添加
+                                            </Button>
                                         </div>
-                                        <div className="text-sm text-gray-700 line-clamp-3">
+                                        <div className="text-sm text-foreground/80 line-clamp-3">
                                             <MathText>{(q.questionText || '').slice(0, 200)}</MathText>
                                         </div>
                                     </div>
                                 ))
                             )}
                         </div>
-                    </div>
+                    </Card>
 
                     {/* 右侧：已选题目 + 试卷信息 */}
-                    <div className="space-y-6">
+                    <div className="flex flex-col gap-6 h-full overflow-hidden">
                         {/* 试卷基本信息 */}
-                        <div className="bg-white rounded-lg shadow-sm p-5">
-                            <h2 className="text-lg font-semibold mb-4">📋 试卷信息</h2>
+                        <Card className="p-5 shrink-0">
+                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <FileText className="w-5 h-5 text-primary" />
+                                试卷信息
+                            </h2>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        试卷标题 <span className="text-red-500">*</span>
+                                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                                        试卷标题 <span className="text-destructive">*</span>
                                     </label>
-                                    <input
-                                        type="text"
+                                    <Input
                                         value={paperTitle}
                                         onChange={(e) => setPaperTitle(e.target.value)}
                                         placeholder="如：2024年高三数学月考试卷"
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        试卷描述
-                                    </label>
-                                    <textarea
-                                        value={paperDescription}
-                                        onChange={(e) => setPaperDescription(e.target.value)}
-                                        placeholder="选填"
-                                        rows={2}
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
                                 <div className="flex gap-4">
                                     <div className="flex-1">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            考试时间（分钟）
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                                            <Clock className="w-3 h-3" /> 考试时间 (分钟)
                                         </label>
-                                        <input
+                                        <Input
                                             type="number"
                                             value={timeLimit}
                                             onChange={(e) => setTimeLimit(e.target.value ? Number(e.target.value) : '')}
-                                            placeholder="如：120"
-                                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            placeholder="120"
                                         />
                                     </div>
                                     <div className="flex-1">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            总分
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                                            <Calculator className="w-3 h-3" /> 总分
                                         </label>
-                                        <div className="px-4 py-2 bg-gray-100 rounded-lg text-lg font-semibold text-blue-600">
+                                        <div className="h-11 px-4 flex items-center bg-secondary/50 rounded-xl text-lg font-semibold text-primary border border-transparent">
                                             {totalScore} 分
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </Card>
 
                         {/* 已选题目列表 */}
-                        <div className="bg-white rounded-lg shadow-sm p-5">
-                            <h2 className="text-lg font-semibold mb-4">
-                                ✅ 已选题目 ({selectedQuestions.length})
-                            </h2>
+                        <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                            <div className="p-5 border-b border-border shrink-0">
+                                <h2 className="text-lg font-semibold flex items-center gap-2">
+                                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs">
+                                        {selectedQuestions.length}
+                                    </span>
+                                    已选题目
+                                </h2>
+                            </div>
 
-                            {selectedQuestions.length === 0 ? (
-                                <div className="text-center py-8 text-gray-500">
-                                    从左侧搜索并添加题目
-                                </div>
-                            ) : (
-                                <div className="space-y-3 max-h-[40vh] overflow-y-auto">
-                                    {selectedQuestions.map((q, idx) => (
-                                        <div key={q.id} className="border rounded-lg p-3 bg-blue-50">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm">
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-secondary/10">
+                                {selectedQuestions.length === 0 ? (
+                                    <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-2">
+                                        <Plus className="w-8 h-8 opacity-20" />
+                                        从左侧搜索并添加题目
+                                    </div>
+                                ) : (
+                                    selectedQuestions.map((q, idx) => (
+                                        <div key={q.id} className="bg-card border border-border rounded-xl p-4 group hover:shadow-sm transition-all">
+                                            <div className="flex justify-between items-center mb-3 pb-3 border-b border-border/50">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="w-6 h-6 bg-primary/10 text-primary rounded-md flex items-center justify-center text-sm font-bold">
                                                         {q.order}
                                                     </span>
-                                                    <span className={`px-2 py-0.5 text-xs rounded ${q.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                                                            q.difficulty === 'hard' ? 'bg-red-100 text-red-700' :
-                                                                'bg-yellow-100 text-yellow-700'
+                                                    <span className={`px-2 py-0.5 text-xs rounded-md font-medium ${q.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                            q.difficulty === 'hard' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                                                                'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                                                         }`}>
                                                         {difficultyLabel(q.difficulty)}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <button
+                                                <div className="flex items-center gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
                                                         onClick={() => moveQuestion(q.id, 'up')}
                                                         disabled={idx === 0}
-                                                        className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                                                        className="h-7 w-7 p-0"
                                                     >
-                                                        ↑
-                                                    </button>
-                                                    <button
+                                                        <ArrowUp className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
                                                         onClick={() => moveQuestion(q.id, 'down')}
                                                         disabled={idx === selectedQuestions.length - 1}
-                                                        className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                                                        className="h-7 w-7 p-0"
                                                     >
-                                                        ↓
-                                                    </button>
-                                                    <input
-                                                        type="number"
-                                                        value={q.score}
-                                                        onChange={(e) => updateScore(q.id, Number(e.target.value) || 0)}
-                                                        className="w-16 px-2 py-1 border rounded text-center"
-                                                    />
-                                                    <span className="text-sm text-gray-500">分</span>
-                                                    <button
+                                                        <ArrowDown className="w-4 h-4" />
+                                                    </Button>
+                                                    <div className="flex items-center gap-1 mx-2">
+                                                        <Input
+                                                            type="number"
+                                                            value={q.score}
+                                                            onChange={(e) => updateScore(q.id, Number(e.target.value) || 0)}
+                                                            className="w-16 h-7 text-center px-1"
+                                                        />
+                                                        <span className="text-xs text-muted-foreground">分</span>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
                                                         onClick={() => removeQuestion(q.id)}
-                                                        className="p-1 text-red-500 hover:text-red-700"
+                                                        className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
                                                     >
-                                                        ✕
-                                                    </button>
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
                                                 </div>
                                             </div>
-                                            <div className="text-sm text-gray-700 line-clamp-2">
+                                            <div className="text-sm text-foreground/80 line-clamp-2">
                                                 <MathText>{(q.questionText || '').slice(0, 150)}</MathText>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </Card>
                     </div>
                 </div>
-            </main>
-        </div>
+            </div>
+        </DashboardLayout>
     );
 }

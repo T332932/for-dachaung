@@ -2,6 +2,11 @@
 
 import { useState } from 'react';
 import { paperApi } from '@/lib/api-client';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { FileText, Save, LayoutTemplate } from 'lucide-react';
 
 type Slot = { order: number; questionType: string; defaultScore: number };
 
@@ -65,50 +70,76 @@ export default function PaperBuilder() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h1 className="text-2xl font-bold mb-4">组卷（模板填槽）</h1>
-          <div className="grid grid-cols-3 gap-4 mb-4">
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">模板组卷</h1>
+            <p className="text-muted-foreground">基于标准考试模板快速生成试卷</p>
+          </div>
+          <Button
+            onClick={handleSubmit}
+            disabled={creating}
+            className="gap-2"
+          >
+            {creating ? '创建中...' : (
+              <>
+                <Save className="w-4 h-4" />
+                生成试卷
+              </>
+            )}
+          </Button>
+        </div>
+
+        <Card className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div>
-              <label className="block text-sm font-medium text-gray-700">模板</label>
-              <select
-                className="mt-1 w-full px-3 py-2 border rounded-md bg-white text-sm"
-                value={templateId}
-                onChange={(e) => handleTemplateChange(e.target.value as keyof typeof templates)}
-              >
-                {Object.entries(templates).map(([id, t]) => (
-                  <option key={id} value={id}>{t.name}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">选择模板</label>
+              <div className="relative">
+                <LayoutTemplate className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                <select
+                  className="w-full h-11 pl-10 pr-3 py-2 rounded-xl border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={templateId}
+                  onChange={(e) => handleTemplateChange(e.target.value as keyof typeof templates)}
+                >
+                  {Object.entries(templates).map(([id, t]) => (
+                    <option key={id} value={id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700">试卷标题</label>
-              <input
-                className="mt-1 w-full px-3 py-2 border rounded-md text-sm"
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">试卷标题</label>
+              <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                leftIcon={<FileText className="w-4 h-4" />}
+                placeholder="请输入试卷标题"
               />
             </div>
           </div>
-          <div className="overflow-auto border rounded-md">
+
+          <div className="rounded-xl border border-border overflow-hidden">
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-100">
+              <thead className="bg-secondary/50">
                 <tr>
-                  <th className="px-3 py-2 text-left">题号</th>
-                  <th className="px-3 py-2 text-left">题型</th>
-                  <th className="px-3 py-2 text-left">分值</th>
-                  <th className="px-3 py-2 text-left">questionId</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">题号</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">题型</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground w-32">分值</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">关联题目 ID</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {rows.map((row, idx) => (
-                  <tr key={row.order} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-3 py-2 font-mono">{row.order}</td>
-                    <td className="px-3 py-2">{row.questionType}</td>
-                    <td className="px-3 py-2">
-                      <input
-                        className="w-16 px-2 py-1 border rounded"
+                  <tr key={row.order} className="bg-card hover:bg-secondary/20 transition-colors">
+                    <td className="px-4 py-3 font-mono text-muted-foreground">{row.order}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-1 rounded-md bg-secondary text-xs font-medium">
+                        {row.questionType}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Input
                         type="number"
                         value={row.score}
                         onChange={(e) => {
@@ -119,12 +150,12 @@ export default function PaperBuilder() {
                             )
                           );
                         }}
+                        className="h-8 text-center"
                       />
                     </td>
-                    <td className="px-3 py-2">
-                      <input
-                        className="w-full px-2 py-1 border rounded"
-                        placeholder="questionId"
+                    <td className="px-4 py-3">
+                      <Input
+                        placeholder="输入题目 ID"
                         value={row.questionId}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -134,6 +165,7 @@ export default function PaperBuilder() {
                             )
                           );
                         }}
+                        className="h-8 font-mono text-xs"
                       />
                     </td>
                   </tr>
@@ -141,17 +173,8 @@ export default function PaperBuilder() {
               </tbody>
             </table>
           </div>
-          <div className="mt-4 flex justify-end">
-            <button
-              onClick={handleSubmit}
-              disabled={creating}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-60"
-            >
-              {creating ? '创建中...' : '创建试卷'}
-            </button>
-          </div>
-        </div>
+        </Card>
       </div>
-    </main>
+    </DashboardLayout>
   );
 }
