@@ -47,6 +47,15 @@ class Question(Base):
     reviews = relationship("QuestionReview", back_populates="question", cascade="all, delete-orphan")
 
 
+class QuestionEmbedding(Base):
+    __tablename__ = "question_embeddings"
+
+    question_id = Column(String(36), ForeignKey("questions.id"), primary_key=True)
+    # 使用 JSON 存储向量，便于快速落地，无需 pgvector 依赖；后续可替换为向量类型
+    embedding = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class Paper(Base):
     __tablename__ = "papers"
 

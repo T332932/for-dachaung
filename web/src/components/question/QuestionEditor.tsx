@@ -16,6 +16,16 @@ interface QuestionEditorProps {
 export function QuestionEditor({ initialData, file, onSave, onCancel }: QuestionEditorProps) {
     const [isSaving, setIsSaving] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [questionText, setQuestionText] = useState(initialData.questionText || '');
+    const [answer, setAnswer] = useState(initialData.answer || '');
+    const [optionsText, setOptionsText] = useState(
+        Array.isArray(initialData.options) ? initialData.options.join('\n') : ''
+    );
+    const [knowledgeText, setKnowledgeText] = useState(
+        Array.isArray(initialData.knowledgePoints) ? initialData.knowledgePoints.join(',') : ''
+    );
+    const [difficulty, setDifficulty] = useState(initialData.difficulty || 'medium');
+    const [questionType, setQuestionType] = useState(initialData.questionType || 'solve');
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isMountedRef = useRef(true);
 
@@ -38,11 +48,11 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
         }
 
         // 验证必填字段
-        if (!initialData.questionText?.trim()) {
+        if (!questionText.trim()) {
             alert('题目内容不能为空，请重新上传');
             return;
         }
-        if (!initialData.answer?.trim()) {
+        if (!answer.trim()) {
             alert('答案不能为空，请重新上传');
             return;
         }
@@ -64,31 +74,30 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
 
             // 处理选项：确保是数组或null
             let processedOptions: string[] | null = null;
-            if (initialData.options) {
-                if (Array.isArray(initialData.options) && initialData.options.length > 0) {
-                    processedOptions = initialData.options;
-                }
-            }
+            const optionLines = optionsText
+                .split('\n')
+                .map((s) => s.trim())
+                .filter((s) => s.length > 0);
+            processedOptions = optionLines.length > 0 ? optionLines : null;
 
             // 处理知识点：确保是数组
-            let processedKnowledgePoints: string[] = [];
-            if (initialData.knowledgePoints) {
-                if (Array.isArray(initialData.knowledgePoints)) {
-                    processedKnowledgePoints = initialData.knowledgePoints.filter(kp => typeof kp === 'string');
-                }
-            }
+            const kpList = knowledgeText
+                .split(',')
+                .map((s) => s.trim())
+                .filter((s) => s.length > 0);
+            const processedKnowledgePoints: string[] = kpList;
 
             const payload: QuestionPayload = {
-                questionText: initialData.questionText.trim(),
+                questionText: questionText.trim(),
                 options: processedOptions,
-                answer: initialData.answer.trim(),
+                answer: answer.trim(),
                 explanation: undefined,
                 hasGeometry: Boolean(initialData.hasGeometry),
                 geometrySvg: initialData.geometrySvg || null,
                 geometryTikz: null,
                 knowledgePoints: processedKnowledgePoints,
-                difficulty: isValidDifficulty(initialData.difficulty) ? initialData.difficulty : 'medium',
-                questionType: isValidQuestionType(initialData.questionType) ? initialData.questionType : 'solve',
+                difficulty: isValidDifficulty(difficulty) ? difficulty : 'medium',
+                questionType: isValidQuestionType(questionType) ? questionType : 'solve',
                 source: undefined,
                 year: undefined,
                 aiGenerated: true,
@@ -98,7 +107,15 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
 
             // 检查组件是否仍然挂载
             if (isMountedRef.current) {
-                onSave(initialData);
+                onSave({
+                    ...initialData,
+                    questionText: payload.questionText,
+                    answer: payload.answer,
+                    options: payload.options || undefined,
+                    knowledgePoints: payload.knowledgePoints,
+                    difficulty: payload.difficulty,
+                    questionType: payload.questionType,
+                });
             }
         } catch (error: any) {
             // 只在组件仍然挂载时显示错误
@@ -241,60 +258,103 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
                 {/* 题干展示 */}
                 <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">📝 题目内容</label>
-                    <div className="w-full min-h-[150px] p-3 border rounded-md bg-gray-50 text-sm">
-                        <MathText>{initialData?.questionText || '（无内容）'}</MathText>
+                    <textarea
+                        className="w-full min-h-[120px] p-3 border rounded-md text-sm"
+                        value={questionText}
+                        onChange={(e) => setQuestionText(e.target.value)}
+                        placeholder="Markdown + LaTeX，支持 $...$ 或 $$...$$"
+                    />
+                    <div className="w-full min-h-[120px] p-3 border rounded-md bg-gray-50 text-sm">
+                        <MathText>{questionText || '（无内容）'}</MathText>
                     </div>
                 </div>
 
                 {/* 选项（选择题） */}
-                {initialData?.options && Array.isArray(initialData.options) && initialData.options.length > 0 && (
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">🔘 选项</label>
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">🔘 选项（每行一个，空则视为无选项）</label>
+                    <textarea
+                        className="w-full min-h-[100px] p-3 border rounded-md text-sm"
+                        value={optionsText}
+                        onChange={(e) => setOptionsText(e.target.value)}
+                        placeholder="A. ...\nB. ..."
+                    />
+                    {optionsText.trim() && (
                         <div className="space-y-2 p-3 border rounded-md bg-gray-50">
-                            {initialData.options.map((opt: string, idx: number) => (
-                                <div key={idx} className="text-sm"><MathText>{opt}</MathText></div>
-                            ))}
+                            {optionsText
+                                .split('\n')
+                                .map((opt) => opt.trim())
+                                .filter((opt) => opt.length > 0)
+                                .map((opt, idx) => (
+                                    <div key={idx} className="text-sm"><MathText>{opt}</MathText></div>
+                                ))}
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* 答案展示 */}
                 <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">✅ 答案与解析</label>
-                    <div className="w-full min-h-[200px] p-3 border rounded-md bg-gray-50 text-sm">
-                        <MathText>{initialData?.answer || '（无答案）'}</MathText>
+                    <textarea
+                        className="w-full min-h-[150px] p-3 border rounded-md text-sm"
+                        value={answer}
+                        onChange={(e) => setAnswer(e.target.value)}
+                        placeholder="答案/解析，支持 Markdown + LaTeX"
+                    />
+                    <div className="w-full min-h-[150px] p-3 border rounded-md bg-gray-50 text-sm">
+                        <MathText>{answer || '（无答案）'}</MathText>
                     </div>
                 </div>
 
                 {/* 知识点 */}
-                {initialData?.knowledgePoints && Array.isArray(initialData.knowledgePoints) && initialData.knowledgePoints.length > 0 && (
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">🎯 知识点</label>
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">🎯 知识点（用逗号分隔）</label>
+                    <input
+                        className="w-full p-3 border rounded-md text-sm"
+                        value={knowledgeText}
+                        onChange={(e) => setKnowledgeText(e.target.value)}
+                        placeholder="函数, 导数"
+                    />
+                    {knowledgeText.trim() && (
                         <div className="flex flex-wrap gap-2">
-                            {initialData.knowledgePoints
-                                .filter((kp): kp is string => typeof kp === 'string')
-                                .map((kp: string, idx: number) => (
+                            {knowledgeText
+                                .split(',')
+                                .map((kp) => kp.trim())
+                                .filter((kp) => kp.length > 0)
+                                .map((kp, idx) => (
                                     <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
                                         {kp}
                                     </span>
                                 ))}
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* 属性展示 */}
                 <div className="grid grid-cols-3 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">难度</label>
-                        <div className="mt-1 px-3 py-2 border rounded-md bg-gray-50 text-sm">
-                            {initialData?.difficulty || 'unknown'}
-                        </div>
+                        <select
+                            className="mt-1 w-full px-3 py-2 border rounded-md bg-white text-sm"
+                            value={difficulty}
+                            onChange={(e) => setDifficulty(e.target.value)}
+                        >
+                            <option value="easy">easy</option>
+                            <option value="medium">medium</option>
+                            <option value="hard">hard</option>
+                        </select>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">题型</label>
-                        <div className="mt-1 px-3 py-2 border rounded-md bg-gray-50 text-sm">
-                            {initialData?.questionType || 'unknown'}
-                        </div>
+                        <select
+                            className="mt-1 w-full px-3 py-2 border rounded-md bg-white text-sm"
+                            value={questionType}
+                            onChange={(e) => setQuestionType(e.target.value)}
+                        >
+                            <option value="choice">choice</option>
+                            <option value="fillblank">fillblank</option>
+                            <option value="solve">solve</option>
+                            <option value="proof">proof</option>
+                        </select>
                     </div>
                 </div>
 

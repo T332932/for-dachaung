@@ -1,0 +1,398 @@
+%2025全国卷1高考数学
+\documentclass[no-math]{ctexart}
+\defaultfontfeatures{Mapping=fullwidth-stop}
+\setCJKsansfont{KaiTi}
+
+\newfontfamily\mRoman{SimSun}
+\everymath{\displaystyle}
+
+\newfontfamily\sz{Times New Roman}
+
+\xeCJKsetup{PunctStyle=kaiming,PunctFamily=zhsong,CJKmath,CheckSingle}
+
+
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta} 
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{tikz-3dplot}
+\usetikzlibrary{patterns}
+\usetikzlibrary{3d,calc}
+\tdplotsetmaincoords{70}{110}
+\allowdisplaybreaks[4]
+\usepackage{diagbox}
+\usepackage{mathtools,autoaligne,autobreak}
+\usepackage[ntheorem]{empheq}
+\newcommand*{\wf}{\mathop{}\!\mathrm{d}}
+\usepackage{esvect}
+
+\usepackage{unicode-math}
+\setmathfont{Latin Modern Math}
+\setmathfont[range=\sqrt,Scale=.8]{Latin Modern Math}
+\setmathfont[range={\lbrace,\rbrace,\lparen,\rparen,\lbrack,\rbrack,\mid}]{TeX Gyre Pagella Math}
+\setmathfont[range={\mitalpha,\mitbeta,\star}]{Asana Math}
+\setmathfont[range={\mbfR,\mbfN,\mbfQ,\mbfZ,\mbfita,\mbfitb,\mbfitc,\mbfitd,\mbfite,\mbfitm,\mbfitn}]{STIX Math}
+\setmathfont[range={\complement},Scale=1.1]{STIX Math}
+\setmathfont[range={\varnothing,\muppi}]{Neo Euler}
+\usepackage{mathsymbolzhcn}
+\usepackage{pifont}
+\usepackage{float}
+\newcommand{\zfrac}[2]{\dfrac{{\raisebox{-0.7mm}{$#1$}}}{\;{\raisebox{0.2mm}{$#2$}}\;}}
+\newcommand{\bfrac}[2]{\dfrac{{\raisebox{-0.7mm}{$#1$}}}{{\raisebox{0.2mm}{$#2$}}}}
+
+\usepackage{NumGoG}
+\newcommand{\quan}[1]{\numcircle[1.02em][-0.3ex]{#1}}
+
+
+\makeatletter
+
+\newdimen\sqrtminh
+\newdimen\sqrtmaxh
+\sqrtminh=10.4pt
+\sqrtmaxh=36.4pt
+\newcount\rootpianyi
+
+\def\r@@t#1#2{\setboxz@h{$\m@th#1\sqrtsign{#2}$}
+\dimen@\ht\z@\advance\dimen@\dp\z@
+\ifdim\dimen@>\sqrtminh
+\ifdim\dimen@<\sqrtmaxh
+\rootpianyi=3
+\fi\fi
+
+\dimen@\ht\z@\advance\dimen@-\ht\rootbox
+\setbox\@ne\hbox{$\m@th#1\mskip\uproot@ mu$}%
+\advance\dimen@ by1.667\wd\@ne
+\mkern-\leftroot@ mu\mkern5mu
+\mkern\rootpianyi mu
+\raise\dimen@\copy\rootbox
+\mkern-\rootpianyi mu
+\mkern-10mu\mkern\leftroot@ mu
+\boxz@}
+
+\makeatother
+
+\usepackage{graphicx}
+\usepackage{enumitem}
+\setenumerate{itemsep=0pt,partopsep=0pt,parsep=\parskip,topsep=0pt}
+
+
+\usepackage{ulem}
+
+\input{insbox}
+ \newcommand*\wrapitem
+  {
+    \apptocmd\labelitemi{\hskip\leftmargin}{}{}
+    \item
+    \patchcmd\labelitemi{\hskip\leftmargin}{}{}{}
+  }
+\newlength\InsertListPrevWidth
+\makeatletter
+\newcommand{\InsertListR}[3][0]
+  {
+    \mbox{}
+    \vspace*{-\baselineskip}
+    \setlength{\leftskip}{\leftmargin}
+    \InsertBoxR{#2}{\hskip-\leftmargin#3\hskip\leftmargin}[#1]
+    \global\InsertListPrevWidth\@framewidth
+  }
+\newcommand*\contitem[1][\the\count1]
+  {
+    \item
+    \bgroup  
+      \def\reserved@a{#1}
+      \def\reserved@b{\the\count1}
+      \ifx\reserved@a\reserved@b
+        \dimen0 = \@wherebottom
+        \advance \dimen0 by -\pagetotal
+        \divide \dimen0 by \baselineskip
+        \count1 = \dimen0
+        \advance \count1 by 1
+        \advance \count1 by -\@numnormal
+      \fi
+      \MoreInsert{#1}%
+    \egroup
+  }
+
+\newcommand*\EndInsert
+  {
+    \@restore@
+    \@ifstar{\@afterindentfalse\@afterheading}{}%
+  }
+\newcommand*\MoreInsert[1]
+  {
+    \ParShape = 2
+                {#1}   0cm   {\the\InsertListPrevWidth}
+                1      0cm   0cm
+  }
+\makeatother
+
+
+\usepackage[labelfont=bf,labelsep=quad]{caption}
+\DeclareCaptionFont{Times New Roman}{\sf}
+\captionsetup{textfont=Times New Roman}
+
+
+
+\usepackage[paperheight=26cm,paperwidth=18.4cm,left=2cm,right=2cm ,top=1.5cm,bottom=2true cm,headsep=10pt,]{geometry}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0pt}
+\usepackage{lastpage}
+
+\usepackage[bodytextleadingratio=1.67,restoremathleading=true]{zhlineskip}
+
+\newcommand{\onech}[4]{\makebox[3.4cm][l]{{\sf A}。#1}\makebox[3.4cm][l]{{\sf B}。#2}\makebox[3.4cm][l]{{\sf C}。#3}\makebox[3.4cm][l]{{\sf D}。#4}}
+\newcommand{\twoch}[4]{\makebox[6.8cm][l]{{\sf A}。#1}\makebox[6.8cm][l]{{\sf B}。#2}\\ \makebox[6.8cm][l]{{\sf C}。#3}\makebox[6.8cm][l]{{\sf D}。#4}}
+
+\newlength\widthcha
+\newlength\widthchb
+\newlength\widthchc
+\newlength\widthchd
+\newlength\widthch
+\newlength\tabmaxwidth
+\setlength\tabmaxwidth{0.7\textwidth}
+\newlength\fourthtabwidth
+\setlength\fourthtabwidth{0.15\textwidth}
+\newlength\halftabwidth
+\setlength\halftabwidth{0.4\textwidth}
+
+\newcommand{\choice}[4]{\settowidth\widthcha{\sf AM.#1}\setlength{\widthch}{\widthcha}
+	\settowidth\widthchb{\sf BM.#2}
+	\ifthenelse{\widthch<\widthchb}{\setlength{\widthch}{\widthchb}}{}
+	\settowidth\widthchb{\sf CM.#3}
+	\ifthenelse{\widthch<\widthchb}{\setlength{\widthch}{\widthchb}}{}
+	\settowidth\widthchb{\sf DM.#4}
+	\ifthenelse{\widthch<\widthchb}{\setlength{\widthch}{\widthchb}}{}
+	\ifthenelse{\widthch<\fourthtabwidth}{\onech{#1}{#2}{#3}{#4}}
+	{\ifthenelse{\widthch<\halftabwidth\and\widthch>\fourthtabwidth}{\twoch{#1}{#2}{#3}{#4}}
+		{\fourch{#1}{#2}{#3}{#4}}}}
+
+
+\newcommand{\undsp}{\underline{\hspace{3em}}}
+
+\usepackage{multicol}
+\setlength{\multicolsep}{0pt}
+\usepackage{tabu}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{diagbox}
+\setlength{\abovetopsep}{0ex} \setlength{\belowrulesep}{0ex}
+\setlength{\aboverulesep}{0ex} \setlength{\belowbottomsep}{0ex}
+\setlength{\heavyrulewidth}{0.08em}
+\makeatletter
+\begingroup
+\catcode`\,=\active
+\def\@x@{\def,{{\mbox{，}}}}
+\expandafter\endgroup\@x@
+\mathcode`\,="8000
+\makeatother
+
+
+\XeTeXdefaultencoding "UTF-8"
+\begin{document}
+\SetMathEnvironmentSinglespace{1}
+\lineskiplimit=5.5pt
+ \lineskip=7pt
+\abovedisplayshortskip=5pt
+\belowdisplayshortskip=5pt
+\abovedisplayskip=5pt
+\belowdisplayskip=5pt
+\medmuskip=3mu plus 1mu minus 3mu
+\thickmuskip=4mu plus 4mu
+
+\delimiterfactor=800
+\setlength{\jot}{-1pt}
+\fancyfoot[C]{\bf\sz 数学试题A 第{\sz\thepage} 页 （共~{\sz\pageref{LastPage}}~页）}
+\noindent{\heiti 绝密$\star$启用前\hfill 试卷类型：{\bf\sz A} }
+\begin{center}
+\zihao{3}{\sz 2025}年普通高等院校招生全国统一考试\\
+\zihao{2}\heiti  数学
+\end{center}
+
+{\bf\sz 本试卷共5页，19小题，满分150分，考试用时120分钟。}
+{\sz
+\begin{enumerate}[align=left,labelindent=0em,labelwidth=4.5em,leftmargin=5em]
+\item[{\heiti 注意事项：}]
+\begin{enumerate}[label=\arabic*.,leftmargin=1em]
+\item 答题前，考生先将自己的姓名、准考证号填 写在答题卡上。用2B铅笔将试卷类型（A）填涂在答题卡相应的位置上。将条形码横贴在答题卡右上角“条形码粘贴处”。
+\item 作答选择题时，选出每小题答案后，用2B铅笔在答题卡上对应题目选项的答案信息点涂黑；如需改动，用橡皮擦干净后，再选涂其他答案。答案不能答在试卷上。
+\item 非选择题必须用黑色字迹的钢笔或签字笔作答，答案必须写在答题卡各题目指定区域内相应位置上；如需改动，先划掉原来的答案，然后再写上新答案；不准使用铅笔和涂改液。不按以上要求作答无效。
+\item 考生必须保证答题卡的整洁。考生结束后，将试卷和答题卡一并交回。
+\end{enumerate}
+\end{enumerate}
+}
+\vspace{1em}
+\begin{enumerate}[align=left,labelindent=0em,labelwidth=2em,labelsep=0em,leftmargin=2em]
+  \item[{\bf 一、}]{\bf\sz 选择题：本大题共 8 小题，每小题 5 分，共计 40 分．每小题给出的四个选项中，只有一个选项是正确的．请把正确的选项填涂在答题卡相应的位置上。}
+\end{enumerate}
+\begin{enumerate}[align=left,labelindent=0em,label={\bf\sz\arabic*.},labelwidth=1.5em,labelsep=0em,leftmargin=1.5em]
+\item $(1+5\mathrm{i} )\mathrm{i}$ 的虚部为\\
+\choice{$-1$ }{$0$}{$1$}{$6$}
+\item 设全集 $U=\{x|x\text{为小于}9\text{的正整数}\}$ ，集合 $A=\{1,3,5\}$ ，则 $\complement_U A$ 中元素个数为\\
+\choice{$0$}{$3$}{$5$}{$8$}
+\item 若双曲线 $C$ 的虚轴长为实轴长的 $\sqrt{7}$ 倍，则 $C$ 的离心率为\\
+\choice{ $\sqrt{2}$}{$2$}{$\sqrt{7}$}{ $2 \sqrt{2}$}
+\item 若点 $(a, 0)(a>0)$ 是函数 $y=2 \tan \left(x-\frac{\pi}{3}\right)$ 的图象的一个对称中心，则 $a$ 的最小值为\\
+\twoch{ $30^{\circ}$}
+{ $60^{\circ}$}{ $90^{\circ}$}{ $135^{\circ}$}
+\item 设 $f(x)$ 是定义在 $\mathbf{R}$ 上且周期为 2 的偶函数，当 $2 \leqslant x \leqslant 3$ 时，$f(x)=5-2 x$ ，则 $f\left(-\frac{3}{4}\right)=$\\
+\choice{$-\frac{1}{2}$}{$-\frac{1}{4}$}{$-\frac{1}{4}$}{$\frac{1}{2}$}
+\item 帆船比赛中，运动员可借助风力计测定风速的大小和方向，测出的结果在航海学中称为视风风速，视风风速对应的向量是真风风速对应的向量与船行风速对应的向量之和，其中船行风速对应的向量与船速对应的向量大小相等，方向相反．表中给出了部分风力等级、名称与风速大小的对应关系．已知某帆船运动员在某时刻测得的视风风速对应的向量与船速对应的向量如图所示（风速的大小和向量的大小相同，单位： $\mathrm{m} / \mathrm{s}$ ），则真风为\\ 
+\choice{轻风}{微风}{和风}{劲风}
+\begin{center}
+	\begin{minipage}{0.45\textwidth} % 表格占据约45%的页面宽度
+		\centering 
+		\begin{tabular}{|c|c|c|}
+			\hline 等级 & 风速大小 & 名称 \\
+			\hline 2 & $1.1 \sim 3.3$ & 轻风 \\
+			\hline 3 & $3.4 \sim 5.4$ & 微风 \\
+			\hline 4 & $5.5 \sim 7.9$ & 和风 \\
+			\hline 5 & $8.0 \sim 10.1$ & 劲风 \\
+			\hline
+		\end{tabular}
+	\end{minipage}
+	\hfill % 生成等宽空白，使两者并排且居中
+	\begin{minipage}{0.5\textwidth} % 50%的页面宽度
+		\centering 
+		\begin{tikzpicture}[>=Stealth, scale=0.8] % 适当缩小图像比例，适配宽度
+			\draw[->] (0,0) -- (4,0) node[right] {$x$};
+			\draw[->] (0,0) -- (0,4) node[above] {$y$};
+			
+			\foreach \x in {1,2,3} \draw (\x,0.1) -- (\x,-0.1) node[below] {\x};
+			\foreach \y in {1,2,3} \draw (0.1,\y) -- (-0.1,\y) node[left] {\y};
+			
+			\draw[thick, ->] (3,3) -- (0,2) node[above right] {视风风速};
+			\draw[thick, ->] (2,0) -- (3,3) node[midway, right] {船速};
+			
+			\draw[dashed] (0,2) -- (3,2);
+			\draw[dashed] (3,0) -- (3,3);
+			\draw[dashed] (2,0) -- (2,3);
+			\draw[dashed] (0,3) -- (3,3);
+			\draw[dashed] (1,0) -- (1,3);
+			\draw[dashed] (0,1) -- (3,1);
+			\node[below left] at (0,0) {$O$};
+		\end{tikzpicture}
+	\end{minipage}
+\end{center}
+\item 若圆 $x^2+(y+2)^2=r^2(r>0)$ 上到直线 $y=\sqrt{3} x+2$ 的距离为 1 的点有且仅有 2 个，则 $r$ 的取值范围是\\
+\choice{$(0,1)$}{$(1,3)$}{$(3,+\infty)$}{$(0,+\infty)$}
+\item 若实数 $x, y, z$ 满足 $2+\log _2 x=3+\log _3 y=5+\log _5 z$ ，则 $x, y, z$ 的大小关系不可能是\\
+\choice{$x>y>z$ }{$x>z>y$}{$y>x>z$}{$y>z>x$}
+\end{enumerate}
+\begin{enumerate}[align=left,labelindent=0em,labelwidth=2em,labelsep=0em,leftmargin=2em,start=9]
+	\item[{\bf 二、}]{\bf\sz 选择题：本题共 3 小题，每小题 6 分，共 18 分。在每小题给出的选项中，有多项符合题目要求。全部选对的得 6 分，部分选对的得部分分，有选错的得 0 分。}
+\end{enumerate}
+\begin{enumerate}[align=left,labelindent=0em,label={\bf\sz\arabic*.},labelwidth=1.5em,labelsep=0em,leftmargin=1.5em,start=9]
+	
+	\item 在正三棱柱 $A B C-A_1 B_1 C_1$ 中，$D$ 为 $B C$ 中点，则\\
+	\choice{$A D \perp A_1 C$ }{$BC \perp$ 平面 $A A_1 D$}{$A D \zhparallel A_1 B_1$}{$CC_1 \zhparallel $ 平面 $A A_1 D$}
+	\item 设抛物线 $C: y^2=6 x$ 的焦点为 $F$ ，过 $F$ 的直线交 $C$ 于 $A 、 B$ ，过 $A$ 作 $l:x=-\frac{3}{2}$ 的垂线交于 $D$， 过 $F$ 且垂直于 $A B$ 的直线交 $l $ 于 $E$ ，则\\
+	\choice{$|A D|=|A F|$ }{$|A E|=|A B|$}{$|A B| \geqslant 6$}{$|A E| \cdot|B E| \geqslant 18$}
+	\item 已知 $\triangle A B C$ 的面积为 $\frac{1}{4}$ ，若 $\cos 2 A+\cos 2 B+2\sin C=2, \cos A \cos B \sin C=\frac{1}{4}$ ，则\\
+	\choice{$\sin C=\sin ^2 A+\sin ^2 B$}{$A B=\sqrt{2}$}{$\sin A+\sin B=\frac{\sqrt{6}}{2}$}{$A C^2+B C^2=3$}
+\end{enumerate}
+\begin{enumerate}[align=left,labelindent=0em,labelwidth=2em,labelsep=0em,leftmargin=2em,start=12]
+\item[{\bf 三、}]{\bf\sz 填空题：本大题共 3 小题，每小题 5 分，共计 15 分。}
+\end{enumerate}
+\begin{enumerate}[align=left,labelindent=0em,label={\bf\sz\arabic*.},labelwidth=1.5em,labelsep=0em,leftmargin=1.5em,resume]
+  \item  若直线 $y=2 x+5$ 是曲线 $y=\mathrm{e}^x+x+a$ 的切线，则 $a=$\undsp.
+\item  若一个正等比数列的前 4 项和为 4 ，前 8 项和为 68 ，则该等比数列的公比为\undsp.
+\item 一个箱子里有 5 个球，分别以 $1 \sim 5$ 标号，若有放回取三次，记至少取出一次的球的个数 $X$ ，则$E(X)=$ \undsp.
+\end{enumerate}
+
+ 
+ \begin{enumerate}[align=left,labelindent=0em,labelwidth=2em,labelsep=0em,leftmargin=2em,start=15]
+ \item[{\bf 四、}]{\bf\sz 解答题：本题共 5 小题，共 77 分。解答应写出文字说明、证明过程或演算步骤}
+\end{enumerate}
+\begin{enumerate}[align=left,labelindent=0em,label={\bf\sz\arabic*.},labelwidth=1.5em,labelsep=0em,leftmargin=1.5em,start=15]
+\item （13分）为研究某疾病与超声波检查结果的关系，从做过超声波检查的人群中随机调查了1000人，得到如下列联表:
+\begin{table}[H]
+		\centering
+		\begin{tabular}{|c|c|c|c|}
+			\hline 
+			\diagbox{组别}{超声波检查结果} & 正常 & 不正常 & 合计 \\
+			\hline
+			患该疾病 & 20 & 180 & 200 \\
+			\hline
+			未患该疾病 & 780 & 20 & 800 \\
+			\hline
+			合计  & 800 & 200 & 1000 \\
+			\hline
+		\end{tabular} 
+\end{table}
+	（1）记超声波检查结果不正常者患有该疾病的概率为 $P$ ，求 $P$ 的估计值；\\
+	（2）根据小概率值 $\alpha=0.001$ 的独立性检验，分析超声波检查结果是否与患该疾病有关．\\
+	
+	附：$\chi^2 = \zfrac{{n{{(ad - bc)}^2}}}{{(a + b)(c + d)(a + c)(b + d)}}$，
+	\begin{tabu}to 8.5cm{X[2.5cm,c,m]|X[2cm,c,m]X[2cm,c,m]X[2,c,m]}
+		$p(\chi^2>k)$&0.050&$0.010$&$0.001$\\\tabucline-
+		$k$&$3.841$&$6.635$&$10.828$\\
+	\end{tabu}
+	\vspace{12em}
+\item （15分）设数列 $\left\{a_n\right\}$ 满足 $a_1=3,\frac{a_{n+1}}{n}=\frac{a_n}{n+1}+\frac{1}{n(n+1)}$ .\\
+	（1）证明：$\left\{n a_n\right\}$ 为等差数列；\\
+	（2）设 $f(x)=a_1 x+a_2 x^2+\cdots+a_m x^m$ ，求 $f^{\prime}(-2)$.
+\vspace{12em}
+\newpage
+\item （15分）如图所示的四棱锥 $P-ABCD$ 中，$P A \perp$ 平面 $A B C D$ ， $B C \zhparallel A D, A B \perp A D$．\\
+（1）证明：平面 $P A B \perp$ 平面 $P A D$ ；\\
+（2）若 $P A=A B=\sqrt{2}, A D=\sqrt{3}+1, B C=2, P, B, C, D$在同一个球面上，设该球面的球心为 $O$ ．
+
+\begin{minipage}{0.65\textwidth}
+	\begin{itemize}
+		\item [（i）] 证明：$O$ 在平面 $A B C D$ 上；
+		\item [（ii）] 求直线 $A C$ 与直线 $P O$ 所成角的余弦值．
+	\end{itemize}
+\end{minipage}
+\hfill
+\begin{minipage}{0.3\textwidth}
+	\begin{tikzpicture}[scale=1.0,line width=0.5pt,tdplot_main_coords]
+			\coordinate (A) at (0,0,0);
+		\coordinate (B) at (4,0,0);
+		\coordinate (C) at (4,2,0);
+		\coordinate (D) at (0,2,0);
+		\coordinate (P) at (0,0,2);
+		
+		\draw[rounded corners=0.05pt]
+		(B)circle (0.25pt)node[left=1pt]{$B$}--
+		(C)circle (0.25pt)node[below=1pt]{$C$}--
+		(D)circle (0.25pt)node[right=1pt]{$D$}--
+		(P)circle (0.25pt)node[above=1pt]{$P$}--(B)--cycle
+		(P)--(C)(P)
+		(A)circle (0.25pt)node[below=1pt]{$A$}
+		;
+		\draw[thin,dash pattern=on 2pt off 2pt]
+		(A)--(B)
+		(A)--(P)
+		(A)--(D);
+	\end{tikzpicture}
+\end{minipage}
+\vspace{12em}
+	
+\item （17分）设椭圆$C: \dfrac{x^2}{a^2}+\dfrac{y^2}{b^2}=1(a>b>0), A$ 为椭圆的下端点，$B$ 为椭圆的右端点，$|A B|=\sqrt{10}$ ，且椭圆 $C$ 的离心率为 $\dfrac{2 \sqrt{2}}{3}$ \\
+	（1）求椭圆的标准方程；\\
+	（2）已知点$P$不在$y$轴上，设 $Q$ 在射线 $A P$ 上的一点，且满足 $|A P| \cdot|A Q|=3$ .
+	\begin{itemize}
+		\item [（i）] 设点 $P(m, n)$，求 $Q$ 的坐标（用 $m, n$ 表示）；
+		\item [（ii）]设$O$为坐标原点，$M$为椭圆$C$上的动点，直线 $O Q$ 的斜率为 $k_1$ ，直线 $O P$ 的斜率为 $k_2$，若 $k_1=3 k_2$，求 $|P M|$ 的最大值．
+	\end{itemize}
+\newpage
+\item （ 17分）设函数 $f(x)=5 \cos x-\cos 5 x$.\\
+	（1）求 $f(x)$ 在 $\left[0,\dfrac{\pi}{4}\right]$ 的最大值；\\
+	（2） 给定 $\theta \in(0, \pi)$ ，设 $a\in\mathbf{R}$，证明：存在 $y \in[a-\theta, a+\theta]$ ，使得 $\cos y \leq \cos \theta$ ；\\
+	（3）设$b\in \mathbf{R}$，若存在 $\varphi\in\mathbf{R}$ 使得 $5 \cos x-\cos (5 x+\varphi) \leq b$ 对$x\in\mathbf{R}$恒成立，求 $b$ 的最小值。
+\end{enumerate}
+\vspace{30em}
+{\kaishu
+	\begin{flushright}
+		\begin{tabu}{ll}
+			录入绘图排版：&八一考研数学竞赛微信公众号
+		\end{tabu}
+	\end{flushright}
+}
+\begin{center}
+	{\heiti 严禁用于商业用途，转载请注明作者与出处！}
+\end{center}
+\end{document}

@@ -142,18 +142,23 @@ class AIService:
   "geometrySvg": "如果有几何图，生成 SVG 代码",
   "knowledgePoints": ["知识点1", "知识点2"],
   "difficulty": "easy/medium/hard",
-  "questionType": "choice/fillblank/solve/proof",
+  "questionType": "choice/multi/fillblank/solve/proof",
   "confidence": 0.0-1.0
 }
 仅输出 JSON，不要额外说明。"""
         
         # 默认的附加说明
-        default_instructions = """重要：questionText 只包含题干和选项，不要包含任何答案或解析；答案与解题步骤只放在 answer 字段。
+        default_instructions = """重要：
+- questionText 只包含题干和选项，不要包含任何答案或解析。
+- 不要在题干前自动加题号（如 1.、(1) 等），题号由系统生成。
+- 答案与解题步骤只放在 answer 字段。
+- questionType 只能是 choice/multi/fillblank/solve/proof 之一，禁止组合值。
 SVG 生成要求：
 - 使用 <line>, <circle>, <ellipse>, <path>, <text> 标签
 - 虚线用 stroke-dasharray="5,5"
 - 文本标注用 <text> 标签，内容为数学符号
-- viewBox="0 0 400 400"，坐标准确"""
+- viewBox="0 0 400 400"，坐标准确
+- 必须是合法 SVG，坐标/属性正确，避免重复属性或拼写错误"""
         
         # 如果有自定义提示词，用它替换默认说明
         if custom_prompt:
