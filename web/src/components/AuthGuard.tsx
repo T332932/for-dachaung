@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { authApi } from '@/lib/api-client';
 
 // 不需要登录的页面
-const publicPaths = ['/login', '/register'];
+const publicPaths = ['/login', '/register', '/'];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter();

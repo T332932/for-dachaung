@@ -268,6 +268,7 @@ async def list_questions(
             source=item.source,
             year=item.year,
             aiGenerated=item.ai_generated,
+            isPublic=item.is_public,
         )
         for item in items
     ]
@@ -298,6 +299,7 @@ async def get_question_detail(
         source=q.source,
         year=q.year,
         aiGenerated=q.ai_generated,
+        isPublic=q.is_public,
     )
 
 

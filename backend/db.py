@@ -24,6 +24,33 @@ def init_db():
     from models import review  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _ensure_is_public_column()
+
+
+def _ensure_is_public_column():
+    """
+    简单迁移：如 questions 表缺少 is_public 列，则自动添加。
+    仅做轻量防护，真正生产环境应使用 Alembic。
+    """
+    try:
+        if _is_sqlite:
+            res = engine.execute("PRAGMA table_info(questions);")
+            cols = [row[1] for row in res.fetchall()]
+            if "is_public" not in cols:
+                engine.execute("ALTER TABLE questions ADD COLUMN is_public BOOLEAN DEFAULT 0;")
+        elif DATABASE_URL.startswith("postgres"):
+            res = engine.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_name='questions';"
+            )
+            cols = [row[0] for row in res.fetchall()]
+            if "is_public" not in cols:
+                engine.execute("ALTER TABLE questions ADD COLUMN is_public BOOLEAN DEFAULT FALSE;")
+        else:
+            # 其他数据库不做自动迁移
+            pass
+    except Exception:
+        # 若迁移失败，不影响应用启动，但后续查询可能报错，建议使用 Alembic 正式迁移
+        pass
 
 
 @contextmanager
