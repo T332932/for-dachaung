@@ -46,9 +46,9 @@ def _ensure_is_public_column():
                 cols = [row[0] for row in res.fetchall()]
                 if "is_public" not in cols:
                     conn.execute(text("ALTER TABLE questions ADD COLUMN is_public BOOLEAN DEFAULT FALSE;"))
-        else:
-            # 其他数据库不做自动迁移
-            pass
+            else:
+                # 其他数据库不做自动迁移
+                pass
     except Exception:
         # 若迁移失败，不影响应用启动，但后续查询可能报错，建议使用 Alembic 正式迁移
         pass
