@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from config import get_settings
 from models import orm
 from models.schemas import StudentAskResponse
+from sqlalchemy import or_
 
 settings = get_settings()
 
@@ -68,7 +69,9 @@ class RAGService:
             )
 
         # 确保已有题目都有向量
-        all_questions: List[orm.Question] = db.query(orm.Question).all()
+        all_questions: List[orm.Question] = db.query(orm.Question).filter(
+            or_(orm.Question.is_public == True, orm.Question.created_by != None)
+        ).all()
         existing = {emb.question_id: emb for emb in db.query(orm.QuestionEmbedding).all()}
 
         for q in all_questions:
@@ -199,4 +202,3 @@ class RAGService:
         if q.knowledge_points:
             parts.append(" ".join(q.knowledge_points))
         return "\n".join(parts)
-

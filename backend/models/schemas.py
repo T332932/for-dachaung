@@ -29,6 +29,7 @@ class QuestionCreateRequest(BaseModel):
     source: Optional[str] = None
     year: Optional[int] = None
     aiGenerated: bool = True
+    isPublic: bool = False
 
 
 class QuestionCreateResponse(BaseModel):
@@ -52,6 +53,7 @@ class QuestionView(BaseModel):
     source: Optional[str] = None
     year: Optional[int] = None
     aiGenerated: bool = True
+    isPublic: bool = False
 
     class Config:
         from_attributes = True

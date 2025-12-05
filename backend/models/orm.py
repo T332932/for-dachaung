@@ -41,6 +41,7 @@ class Question(Base):
     source = Column(String(256), nullable=True)
     year = Column(Integer, nullable=True)
     ai_generated = Column(Boolean, default=True)
+    is_public = Column(Boolean, default=False)
     created_by = Column(String(36), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

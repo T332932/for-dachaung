@@ -23,6 +23,7 @@ export interface QuestionPayload {
   source?: string | null;
   year?: number | null;
   aiGenerated?: boolean;
+  isPublic?: boolean;  // 是否公开到公共题库
 }
 
 export interface PaperQuestionInput {

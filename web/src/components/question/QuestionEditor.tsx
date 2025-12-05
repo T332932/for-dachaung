@@ -26,6 +26,7 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
     );
     const [difficulty, setDifficulty] = useState(initialData.difficulty || 'medium');
     const [questionType, setQuestionType] = useState(initialData.questionType || 'solve');
+    const [isPublic, setIsPublic] = useState(false);  // 默认私有
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isMountedRef = useRef(true);
 
@@ -101,6 +102,7 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
                 source: undefined,
                 year: undefined,
                 aiGenerated: true,
+                isPublic: isPublic,
             };
 
             await questionApi.create(payload);
@@ -216,7 +218,16 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex justify-between items-center border-b pb-4">
                 <h3 className="text-lg font-semibold">题目预览</h3>
-                <div className="space-x-2">
+                <div className="flex items-center space-x-4">
+                    <label className="flex items-center space-x-2 text-sm text-gray-600">
+                        <input
+                            type="checkbox"
+                            checked={isPublic}
+                            onChange={(e) => setIsPublic(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span>公开到题库</span>
+                    </label>
                     <Button variant="outline" onClick={handleDownloadPdf} disabled={isDownloading || !file}>
                         {isDownloading ? '生成中...' : '下载 PDF 预览'}
                     </Button>

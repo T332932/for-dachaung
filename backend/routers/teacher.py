@@ -206,6 +206,7 @@ async def create_question(
             source=payload.source,
             year=payload.year,
             ai_generated=payload.aiGenerated,
+            is_public=payload.isPublic,
             created_by=current_user.id if current_user else None,
         )
         db.add(q)
@@ -231,14 +232,19 @@ async def list_questions(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    _: orm.User = Depends(require_role(["teacher", "admin"])),
+    current_user: orm.User = Depends(require_role(["teacher", "admin"])),
     search: str = Query(None, description="按题干/答案模糊搜索"),
+    includePublic: bool = Query(False, description="是否包含公共题目"),
 ):
     """
     简单分页列出题目。
     """
     offset = (page - 1) * limit
     query = db.query(orm.Question)
+    if includePublic:
+        query = query.filter(or_(orm.Question.created_by == current_user.id, orm.Question.is_public == True))
+    else:
+        query = query.filter(orm.Question.created_by == current_user.id)
     if search:
         like = f"%{search}%"
         query = query.filter(

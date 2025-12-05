@@ -25,6 +25,7 @@ export default function QuestionsPage() {
     const [filters, setFilters] = useState({
         difficulty: '',
         questionType: '',
+        includePublic: true,  // 默认包含公共题
     });
 
     // 加载题目列表
@@ -37,6 +38,7 @@ export default function QuestionsPage() {
                 search: searchMode === 'list' ? searchQuery : undefined,
                 difficulty: filters.difficulty || undefined,
                 question_type: filters.questionType || undefined,
+                includePublic: filters.includePublic,
             });
             setQuestions(result.questions || []);
             setTotalPages(result.totalPages || 1);
@@ -174,6 +176,20 @@ export default function QuestionsPage() {
                                 清除搜索
                             </button>
                         )}
+
+                        <label className="flex items-center space-x-2 text-sm text-gray-600 ml-4">
+                            <input
+                                type="checkbox"
+                                checked={filters.includePublic}
+                                onChange={(e) => {
+                                    setFilters(f => ({ ...f, includePublic: e.target.checked }));
+                                    setPage(1);
+                                    setSearchMode('list');
+                                }}
+                                className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                            />
+                            <span>包含公共题</span>
+                        </label>
                     </div>
 
                     {searchMode === 'semantic' && (
@@ -198,8 +214,8 @@ export default function QuestionsPage() {
                                 <div className="flex justify-between items-start mb-3">
                                     <div className="flex gap-2 flex-wrap">
                                         <span className={`px-2 py-1 text-xs rounded ${q.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                                                q.difficulty === 'hard' ? 'bg-red-100 text-red-700' :
-                                                    'bg-yellow-100 text-yellow-700'
+                                            q.difficulty === 'hard' ? 'bg-red-100 text-red-700' :
+                                                'bg-yellow-100 text-yellow-700'
                                             }`}>
                                             {difficultyLabel(q.difficulty)}
                                         </span>
