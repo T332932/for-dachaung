@@ -46,7 +46,7 @@ export default function LandingPage() {
                     </div>
 
                     <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-                        让组卷回归 <span className="text-gradient">教学本质</span>
+                        智题云卷 · <span className="text-gradient">让组卷更懂教学</span>
                     </h1>
 
                     <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
