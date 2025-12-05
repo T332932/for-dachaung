@@ -1,13 +1,22 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2, Sparkles, Brain, FileText, Search } from 'lucide-react';
 import { MathText } from '@/components/ui/MathText';
+import { authApi } from '@/lib/api-client';
 
 export default function LandingPage() {
     const router = useRouter();
+
+    // 如果已登录，自动跳转到 dashboard
+    useEffect(() => {
+        if (authApi.isLoggedIn()) {
+            router.replace('/dashboard');
+        }
+    }, [router]);
 
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
