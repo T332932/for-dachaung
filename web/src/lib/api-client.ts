@@ -121,13 +121,13 @@ api.interceptors.request.use(
 export const authApi = {
   // 获取验证码
   getCaptcha: async (): Promise<{ captchaId: string; captchaImage: string }> => {
-    const response = await api.get('/auth/captcha');
+    const response = await api.get('/api/auth/captcha');
     return response.data;
   },
 
   // 登录
   login: async (username: string, password: string): Promise<{ access_token: string }> => {
-    const response = await api.post('/auth/login', { username, password });
+    const response = await api.post('/api/auth/login', { username, password });
     const { access_token } = response.data;
     if (typeof window !== 'undefined' && access_token) {
       localStorage.setItem('zujuan_token', access_token);
@@ -150,7 +150,7 @@ export const authApi = {
     email?: string;
     role: string;
   }> => {
-    const response = await api.post('/auth/register', {
+    const response = await api.post('/api/auth/register', {
       ...data,
       role: data.role || 'teacher',
     });
