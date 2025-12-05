@@ -102,6 +102,70 @@ api.interceptors.response.use(
   }
 );
 
+// 添加请求拦截器，自动携带 token
+api.interceptors.request.use(
+  (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('zujuan_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ============ 认证相关 API ============
+export const authApi = {
+  // 登录
+  login: async (username: string, password: string): Promise<{ access_token: string }> => {
+    const response = await api.post('/auth/login', { username, password });
+    const { access_token } = response.data;
+    if (typeof window !== 'undefined' && access_token) {
+      localStorage.setItem('zujuan_token', access_token);
+    }
+    return response.data;
+  },
+
+  // 注册
+  register: async (data: { username: string; password: string; email?: string; role?: string }): Promise<{
+    id: string;
+    username: string;
+    email?: string;
+    role: string;
+  }> => {
+    const response = await api.post('/auth/register', {
+      ...data,
+      role: data.role || 'teacher',
+    });
+    return response.data;
+  },
+
+  // 登出
+  logout: () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('zujuan_token');
+    }
+  },
+
+  // 检查是否已登录
+  isLoggedIn: (): boolean => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem('zujuan_token');
+    }
+    return false;
+  },
+
+  // 获取 token
+  getToken: (): string | null => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('zujuan_token');
+    }
+    return null;
+  },
+};
+
 // 题目相关 API
 export const questionApi = {
   // 上传图片并分析
@@ -184,6 +248,22 @@ export const questionApi = {
   // 获取默认提示词
   getDefaultPrompt: async (): Promise<{ prompt: string }> => {
     const response = await api.get('/api/teacher/prompt/default');
+    return response.data;
+  },
+
+  // 语义搜索题目
+  search: async (query: string, topK: number = 5): Promise<Array<{
+    id: string;
+    questionText: string;
+    answer: string;
+    similarity: number;
+    difficulty: string;
+    questionType: string;
+    knowledgePoints: string[];
+  }>> => {
+    const response = await api.get('/api/student/search', {
+      params: { q: query, top_k: topK },
+    });
     return response.data;
   },
 };
