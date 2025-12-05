@@ -112,7 +112,7 @@ export default function PaperBuilder() {
                         type="number"
                         value={row.score}
                         onChange={(e) => {
-                          const val = e.target.value;
+                          const val = Number(e.target.value) || 0;
                           setRows((prev) =>
                             prev.map((r) =>
                               r.order === row.order ? { ...r, score: val } : r
