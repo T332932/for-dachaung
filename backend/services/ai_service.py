@@ -281,12 +281,17 @@ SVG 生成要求：
             # 提取 questionText
             qt_match = re.search(r'"questionText"\s*:\s*"((?:[^"\\]|\\.)*)?"', cleaned, re.DOTALL)
             if qt_match:
-                result["questionText"] = qt_match.group(1).replace('\\n', '\n').replace('\\"', '"') if qt_match.group(1) else ""
+                # 处理 JSON 转义: \\n -> \n, \\" -> ", \\\\ -> \\ (LaTeX 命令需要单反斜线)
+                text = qt_match.group(1) if qt_match.group(1) else ""
+                text = text.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                result["questionText"] = text
             
             # 提取 answer
             ans_match = re.search(r'"answer"\s*:\s*"((?:[^"\\]|\\.)*)"', cleaned, re.DOTALL)
             if ans_match:
-                result["answer"] = ans_match.group(1).replace('\\n', '\n').replace('\\"', '"')
+                text = ans_match.group(1)
+                text = text.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                result["answer"] = text
             
             # 提取 hasGeometry
             hg_match = re.search(r'"hasGeometry"\s*:\s*(true|false)', cleaned)
