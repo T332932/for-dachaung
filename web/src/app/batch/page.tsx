@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { questionApi } from '@/lib/api-client';
 import { MathText } from '@/components/ui/MathText';
 import { QuestionAnalysisResult } from '@/components/question/QuestionUploader';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 type ItemStatus = 'pending' | 'processing' | 'ready' | 'error' | 'saved';
 
@@ -111,16 +112,20 @@ export default function BatchUploader() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h1 className="text-2xl font-bold mb-4">批量上传 / 预览 / 入库</h1>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">批量上传</h1>
+          <p className="text-muted-foreground">上传多个题目图片，AI 自动识别并入库</p>
+        </div>
+
+        <div className="p-6 rounded-xl border border-border bg-card">
           <div
-            className="border-2 border-dashed rounded-lg p-6 text-center text-sm text-gray-600 cursor-pointer hover:border-blue-400"
+            className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
           >
-            <p className="font-medium">拖拽或点击选择多个图片文件</p>
+            <p className="font-medium text-foreground mb-2">拖拽或点击选择多个图片文件</p>
             <input
               type="file"
               multiple
@@ -133,7 +138,7 @@ export default function BatchUploader() {
             <button
               onClick={runAll}
               disabled={isUploading || items.length === 0}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 font-medium"
             >
               {isUploading ? '解析中…' : '解析全部'}
             </button>
@@ -142,24 +147,24 @@ export default function BatchUploader() {
 
         <div className="space-y-4">
           {items.map((item) => (
-            <div key={item.id} className="bg-white p-4 rounded-lg shadow-sm border">
+            <div key={item.id} className="bg-card p-4 rounded-xl border border-border">
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="font-medium">{item.name}</div>
-                  <div className="text-xs text-gray-500">状态：{item.status}</div>
-                  {item.error && <div className="text-xs text-red-500">错误：{item.error}</div>}
+                  <div className="font-medium text-foreground">{item.name}</div>
+                  <div className="text-xs text-muted-foreground">状态：{item.status}</div>
+                  {item.error && <div className="text-xs text-destructive">错误：{item.error}</div>}
                 </div>
                 <div className="space-x-2">
                   <button
                     onClick={() => runPreview(item)}
-                    className="px-3 py-1 border rounded text-sm hover:bg-gray-100"
+                    className="px-3 py-1 border border-border rounded-lg text-sm hover:bg-secondary transition-colors"
                   >
                     重新生成
                   </button>
                   <button
                     onClick={() => saveItem(item)}
                     disabled={!validateForSave(item.result) || item.status !== 'ready'}
-                    className="px-3 py-1 bg-green-600 text-white rounded text-sm disabled:opacity-50"
+                    className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm disabled:opacity-50"
                   >
                     入库
                   </button>
@@ -169,15 +174,15 @@ export default function BatchUploader() {
               {item.result && (
                 <div className="mt-3 space-y-2 text-sm">
                   <div>
-                    <div className="font-semibold text-gray-700">题干</div>
-                    <div className="p-2 border rounded bg-gray-50">
+                    <div className="font-semibold text-muted-foreground">题干</div>
+                    <div className="p-2 border border-border rounded-lg bg-secondary/50">
                       <MathText>{item.result.questionText || ''}</MathText>
                     </div>
                   </div>
                   {item.result.options && item.result.options.length > 0 && (
                     <div>
-                      <div className="font-semibold text-gray-700">选项</div>
-                      <div className="p-2 border rounded bg-gray-50 space-y-1">
+                      <div className="font-semibold text-muted-foreground">选项</div>
+                      <div className="p-2 border border-border rounded-lg bg-secondary/50 space-y-1">
                         {item.result.options.map((opt, idx) => (
                           <MathText key={idx}>{opt}</MathText>
                         ))}
@@ -185,16 +190,16 @@ export default function BatchUploader() {
                     </div>
                   )}
                   <div>
-                    <div className="font-semibold text-gray-700">答案</div>
-                    <div className="p-2 border rounded bg-gray-50">
+                    <div className="font-semibold text-muted-foreground">答案</div>
+                    <div className="p-2 border border-border rounded-lg bg-secondary/50">
                       <MathText>{item.result.answer || ''}</MathText>
                     </div>
                   </div>
                   {item.result.svgPng && (
                     <div>
-                      <div className="font-semibold text-gray-700">几何图预览</div>
-                      <div className="p-2 border rounded bg-white flex justify-center">
-                        <img src={item.result.svgPng} className="max-h-64" />
+                      <div className="font-semibold text-muted-foreground">几何图预览</div>
+                      <div className="p-2 border border-border rounded-lg bg-card flex justify-center">
+                        <img src={item.result.svgPng} className="max-h-64" alt="几何图" />
                       </div>
                     </div>
                   )}
@@ -203,10 +208,10 @@ export default function BatchUploader() {
             </div>
           ))}
           {items.length === 0 && (
-            <div className="text-center text-sm text-gray-500">尚未添加文件</div>
+            <div className="text-center py-8 text-muted-foreground">尚未添加文件</div>
           )}
         </div>
       </div>
-    </main>
+    </DashboardLayout>
   );
 }

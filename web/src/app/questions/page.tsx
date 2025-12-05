@@ -104,7 +104,7 @@ export default function QuestionsPage() {
                         <p className="text-muted-foreground">管理和检索所有题目资源</p>
                     </div>
                     <div className="flex gap-3">
-                        <Link href="/">
+                        <Link href="/dashboard">
                             <Button variant="outline">上传题目</Button>
                         </Link>
                         <Link href="/papers/create">
@@ -232,7 +232,7 @@ export default function QuestionsPage() {
                         </div>
                         <h3 className="text-lg font-medium text-foreground">暂无题目</h3>
                         <p className="text-muted-foreground mt-1">
-                            没有找到相关题目，试着调整筛选条件或 <Link href="/" className="text-primary hover:underline">上传新题目</Link>
+                            没有找到相关题目，试着调整筛选条件或 <Link href="/dashboard" className="text-primary hover:underline">上传新题目</Link>
                         </p>
                     </div>
                 ) : (

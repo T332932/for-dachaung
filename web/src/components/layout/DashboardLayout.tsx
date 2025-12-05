@@ -43,7 +43,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     };
 
     const navItems = [
-        { href: '/', label: '题目上传', icon: <LayoutDashboard className="w-5 h-5" /> },
+        { href: '/dashboard', label: '题目上传', icon: <LayoutDashboard className="w-5 h-5" /> },
         { href: '/questions', label: '题库浏览', icon: <BookOpen className="w-5 h-5" /> },
         { href: '/papers', label: '我的试卷', icon: <FileText className="w-5 h-5" /> },
     ];

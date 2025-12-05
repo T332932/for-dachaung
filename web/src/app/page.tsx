@@ -3,9 +3,7 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowRight, CheckCircle2, Sparkles, Brain, FileText, Search } from 'lucide-react';
-import { MathText } from '@/components/ui/MathText';
+import { ArrowRight, Sparkles, Brain, FileText, Search } from 'lucide-react';
 import { authApi } from '@/lib/api-client';
 
 export default function LandingPage() {
