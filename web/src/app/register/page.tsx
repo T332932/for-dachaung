@@ -3,7 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { User, Lock, Mail, Key, RefreshCw, ArrowRight } from 'lucide-react';
 import { authApi } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AuthLayout } from '@/components/layout/AuthLayout';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -73,7 +77,6 @@ export default function RegisterPage() {
             router.push('/login');
         } catch (err: any) {
             setError(err?.userMessage || err?.response?.data?.detail || err?.message || '注册失败');
-            // 注册失败时刷新验证码
             loadCaptcha();
         } finally {
             setLoading(false);
@@ -81,139 +84,124 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-teal-100">
-            <div className="w-full max-w-md">
-                <div className="bg-white rounded-2xl shadow-xl p-8">
-                    <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-gray-800">📝 教师注册</h1>
-                        <p className="text-gray-500 mt-2">创建您的账号</p>
+        <AuthLayout
+            title="创建账号"
+            subtitle="加入智能组卷系统，开启高效教学"
+        >
+            <form onSubmit={handleSubmit} className="space-y-5">
+                {error && (
+                    <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm font-medium flex items-center animate-in slide-in-from-top-2">
+                        <span className="mr-2">⚠️</span> {error}
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-4">
+                    <Input
+                        label="用户名"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="请输入用户名"
+                        leftIcon={<User className="w-4 h-4" />}
+                        disabled={loading}
+                    />
+
+                    <Input
+                        label="邮箱 (可选)"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="请输入邮箱"
+                        leftIcon={<Mail className="w-4 h-4" />}
+                        disabled={loading}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input
+                            label="密码"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="至少6位"
+                            leftIcon={<Lock className="w-4 h-4" />}
+                            disabled={loading}
+                        />
+                        <Input
+                            label="确认密码"
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="重复密码"
+                            leftIcon={<Lock className="w-4 h-4" />}
+                            disabled={loading}
+                        />
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {error && (
-                            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
-                                {error}
-                            </div>
-                        )}
+                    <Input
+                        label="邀请码 (可选)"
+                        value={inviteCode}
+                        onChange={(e) => setInviteCode(e.target.value)}
+                        placeholder="如有请填写"
+                        leftIcon={<Key className="w-4 h-4" />}
+                        disabled={loading}
+                    />
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                用户名 <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                                placeholder="请输入用户名"
-                                disabled={loading}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                邮箱 <span className="text-gray-400">(可选)</span>
-                            </label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                                placeholder="请输入邮箱"
-                                disabled={loading}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                密码 <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                                placeholder="请输入密码（至少6位）"
-                                disabled={loading}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                确认密码 <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="password"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                                placeholder="请再次输入密码"
-                                disabled={loading}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                邀请码 <span className="text-gray-400">(如有请填写)</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={inviteCode}
-                                onChange={(e) => setInviteCode(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                                placeholder="请输入邀请码"
-                                disabled={loading}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                验证码 <span className="text-red-500">*</span>
-                            </label>
-                            <div className="flex gap-3">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">验证码</label>
+                        <div className="flex gap-3">
+                            <div className="relative flex-1">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <Key className="w-4 h-4" />
+                                </div>
                                 <input
                                     type="text"
                                     value={captchaCode}
                                     onChange={(e) => setCaptchaCode(e.target.value.toUpperCase())}
-                                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                                    placeholder="请输入验证码"
+                                    className="flex h-11 w-full rounded-xl border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                                    placeholder="输入验证码"
                                     disabled={loading}
                                     maxLength={4}
                                 />
+                            </div>
+                            <div
+                                className="relative group cursor-pointer"
+                                onClick={loadCaptcha}
+                                title="点击刷新"
+                            >
                                 {captchaImage ? (
                                     <img
                                         src={captchaImage}
                                         alt="验证码"
-                                        className="h-12 rounded-lg cursor-pointer border hover:opacity-80"
-                                        onClick={loadCaptcha}
-                                        title="点击刷新"
+                                        className="h-11 w-32 object-cover rounded-xl border border-input hover:opacity-80 transition-opacity"
                                     />
                                 ) : (
-                                    <div className="w-24 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-sm text-gray-400">
+                                    <div className="h-11 w-32 bg-secondary rounded-xl flex items-center justify-center text-xs text-muted-foreground animate-pulse">
                                         加载中...
                                     </div>
                                 )}
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10 rounded-xl">
+                                    <RefreshCw className="w-4 h-4 text-white drop-shadow-md" />
+                                </div>
                             </div>
-                            <p className="text-xs text-gray-400 mt-1">点击图片刷新验证码</p>
                         </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? '注册中...' : '注册'}
-                        </button>
-                    </form>
-
-                    <div className="mt-6 text-center text-sm text-gray-500">
-                        已有账号？
-                        <Link href="/login" className="text-green-600 hover:underline ml-1">
-                            立即登录
-                        </Link>
                     </div>
                 </div>
-            </div>
-        </div>
+
+                <Button
+                    type="submit"
+                    className="w-full mt-2"
+                    size="lg"
+                    isLoading={loading}
+                >
+                    立即注册 <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+
+                <div className="text-center text-sm text-muted-foreground">
+                    已有账号？
+                    <Link href="/login" className="text-primary font-medium hover:underline ml-1">
+                        立即登录
+                    </Link>
+                </div>
+            </form>
+        </AuthLayout>
     );
 }

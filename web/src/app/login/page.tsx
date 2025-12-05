@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { User, Lock, ArrowRight } from 'lucide-react';
 import { authApi } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AuthLayout } from '@/components/layout/AuthLayout';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -26,73 +30,69 @@ export default function LoginPage() {
             await authApi.login(username, password);
             router.push('/');
         } catch (err: any) {
-            setError(err?.userMessage || err?.message || '登录失败');
+            setError(err?.userMessage || '登录失败，请检查用户名和密码');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-            <div className="w-full max-w-md">
-                <div className="bg-white rounded-2xl shadow-xl p-8">
-                    <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-gray-800">📚 智能组卷系统</h1>
-                        <p className="text-gray-500 mt-2">教师登录</p>
+        <AuthLayout
+            title="欢迎回来"
+            subtitle="请输入您的账号密码登录系统"
+        >
+            <form onSubmit={handleSubmit} className="space-y-6">
+                {error && (
+                    <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm font-medium flex items-center animate-in slide-in-from-top-2">
+                        <span className="mr-2">⚠️</span> {error}
                     </div>
+                )}
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        {error && (
-                            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
-                                {error}
-                            </div>
-                        )}
+                <div className="space-y-4">
+                    <Input
+                        label="用户名"
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="请输入用户名"
+                        leftIcon={<User className="w-4 h-4" />}
+                        disabled={loading}
+                    />
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                用户名
-                            </label>
-                            <input
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                                placeholder="请输入用户名"
-                                disabled={loading}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                密码
-                            </label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                                placeholder="请输入密码"
-                                disabled={loading}
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
+                    <div className="space-y-1">
+                        <Input
+                            label="密码"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="请输入密码"
+                            leftIcon={<Lock className="w-4 h-4" />}
                             disabled={loading}
-                            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? '登录中...' : '登录'}
-                        </button>
-                    </form>
-
-                    <div className="mt-6 text-center text-sm text-gray-500">
-                        还没有账号？
-                        <Link href="/register" className="text-blue-600 hover:underline ml-1">
-                            立即注册
-                        </Link>
+                        />
+                        <div className="flex justify-end">
+                            <Link href="#" className="text-xs text-primary hover:underline">
+                                忘记密码？
+                            </Link>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
+
+                <Button
+                    type="submit"
+                    className="w-full"
+                    size="lg"
+                    isLoading={loading}
+                >
+                    登录系统 <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+
+                <div className="text-center text-sm text-muted-foreground">
+                    还没有账号？
+                    <Link href="/register" className="text-primary font-medium hover:underline ml-1">
+                        立即注册
+                    </Link>
+                </div>
+            </form>
+        </AuthLayout>
     );
 }
