@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KaTeX 渲染测试</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      margin-top: 0;
+      color: #333;
+      border-bottom: 2px solid #4a90d9;
+      padding-bottom: 10px;
+    }
+    .question-text {
+      font-size: 16px;
+      line-height: 1.8;
+      color: #333;
+    }
+    .answer {
+      font-size: 15px;
+      line-height: 1.8;
+      color: #555;
+      background: #f9f9f9;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid #4a90d9;
+    }
+    .svg-container {
+      text-align: center;
+      padding: 20px;
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 8px;
+    }
+    .meta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .tag {
+      background: #e3f2fd;
+      color: #1976d2;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 13px;
+    }
+    .katex { font-size: 1.1em; }
+  </style>
+</head>
+<body>
+  <h1>📐 KaTeX 渲染测试</h1>
+  
+  <div class="card">
+    <h3>📝 题目内容</h3>
+    <div class="question-text" id="question">
+已知四棱锥 $P-ABCD$，$\triangle PAD$ 是以 $AD$ 为底的等腰三角形，平面 $PAD \perp$ 平面 $ABCD$，底面 $ABCD$ 为直角梯形，其中 $AD \parallel BC$，$CD \perp AD$，$PC = AD = 2DC = 2CB$，$E$ 为 $PD$ 的中点。
+
+（Ⅰ）证明：$CE \parallel$ 平面 $PAB$；
+
+（Ⅱ）求直线 $CE$ 与平面 $PBC$ 所成角的正弦值。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📐 几何图形 (AI生成SVG)</h3>
+    <div class="svg-container">
+      <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" width="300" height="300">
+        <defs>
+          <style>text { font-size: 16px; font-family: 'Times New Roman', serif; }</style>
+        </defs>
+        <path d="M 80 280 L 150 320 L 320 320 L 250 280 Z" fill="#f0f0f0" stroke="black" stroke-width="1" opacity="0.5"/>
+        <line x1="80" y1="280" x2="150" y2="320" stroke="black" stroke-dasharray="5,5"/>
+        <line x1="80" y1="280" x2="250" y2="280" stroke="black"/>
+        <line x1="250" y1="280" x2="320" y2="320" stroke="black"/>
+        <line x1="150" y1="320" x2="320" y2="320" stroke="black"/>
+        <line x1="200" y1="100" x2="80" y2="280" stroke="black"/>
+        <line x1="200" y1="100" x2="150" y2="320" stroke="black"/>
+        <line x1="200" y1="100" x2="320" y2="320" stroke="black"/>
+        <line x1="200" y1="100" x2="250" y2="280" stroke="black"/>
+        <circle cx="260" cy="210" r="3" fill="red"/>
+        <line x1="150" y1="320" x2="260" y2="210" stroke="#d32f2f" stroke-width="2"/>
+        <text x="195" y="90">P</text>
+        <text x="60" y="285">A</text>
+        <text x="250" y="270">B</text>
+        <text x="135" y="340">C</text>
+        <text x="325" y="335">D</text>
+        <text x="268" y="205">E</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>✅ 答案与解析</h3>
+    <div class="answer" id="answer">
+<strong>（Ⅰ）证明：</strong>
+
+取 $PA$ 的中点为 $F$，连接 $EF$，$FB$。
+
+在 $\triangle PAD$ 中，因为 $E$ 是 $PD$ 的中点，$F$ 是 $PA$ 的中点，
+所以 $EF$ 是 $\triangle PAD$ 的中位线。
+因此，$EF \parallel AD$ 且 $EF = \frac{1}{2}AD$。
+
+在底面梯形 $ABCD$ 中，已知 $AD \parallel BC$ 且 $AD = 2CB$。
+所以 $BC = \frac{1}{2}AD$。
+
+由上可知，$EF \parallel BC$ 且 $EF = BC$。
+所以四边形 $BCFE$ 是一个平行四边形。
+因此，$CE \parallel FB$。
+
+又因为 $FB \subset$ 平面 $PAB$，$CE \not\subset$ 平面 $PAB$，
+所以 <strong>$CE \parallel$ 平面 $PAB$</strong>。
+
+---
+
+<strong>（Ⅱ）解：</strong>
+
+设 $DC = CB = a$，则 $AD = 2a$，$PC = 2a$。
+
+建立空间直角坐标系，以 $AD$ 中点 $O$ 为原点：
+- $A(-a, 0, 0)$，$D(a, 0, 0)$
+- $C(a, a, 0)$，$B(0, a, 0)$
+- $PO = \sqrt{PC^2 - OC^2} = \sqrt{4a^2 - 2a^2} = a\sqrt{2}$
+- $P(0, 0, a\sqrt{2})$
+- $E = \left(\frac{a}{2}, 0, \frac{a\sqrt{2}}{2}\right)$
+
+计算：
+- $\vec{CE} = \left(-\frac{a}{2}, -a, \frac{a\sqrt{2}}{2}\right)$
+- 平面 $PBC$ 的法向量 $\vec{n} = (0, \sqrt{2}, 1)$
+
+$$\sin\theta = \frac{|\vec{CE} \cdot \vec{n}|}{|\vec{CE}| \cdot |\vec{n}|} = \frac{\frac{a\sqrt{2}}{2}}{\frac{a\sqrt{7}}{2} \cdot \sqrt{3}} = \frac{\sqrt{42}}{21}$$
+
+<strong>答：直线 $CE$ 与平面 $PBC$ 所成角的正弦值为 $\boxed{\dfrac{\sqrt{42}}{21}}$</strong>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🏷️ 元数据</h3>
+    <div class="meta">
+      <span class="tag">📊 难度: medium</span>
+      <span class="tag">📝 题型: solve</span>
+      <span class="tag">🎯 空间几何</span>
+      <span class="tag">🎯 线面平行</span>
+      <span class="tag">🎯 中位线定理</span>
+      <span class="tag">🎯 向量法求线面角</span>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false},
+          {left: '\\[', right: '\\]', display: true},
+          {left: '\\(', right: '\\)', display: false}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+</body>
+</html>

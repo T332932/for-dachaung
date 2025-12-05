@@ -11,7 +11,7 @@ class QuestionAnalysisResponse(BaseModel):
     geometrySvg: Optional[str] = None
     knowledgePoints: List[str] = []
     difficulty: Optional[Literal["easy", "medium", "hard"]] = None
-    questionType: Optional[Literal["choice", "fillblank", "solve", "proof"]] = None
+    questionType: Optional[Literal["choice", "multi", "fillblank", "solve", "proof"]] = None
     confidence: Optional[float] = None
 
 
@@ -25,7 +25,7 @@ class QuestionCreateRequest(BaseModel):
     geometryTikz: Optional[str] = None
     knowledgePoints: List[str] = []
     difficulty: Literal["easy", "medium", "hard"] = "medium"
-    questionType: Literal["choice", "fillblank", "solve", "proof"] = "solve"
+    questionType: Literal["choice", "multi", "fillblank", "solve", "proof"] = "solve"
     source: Optional[str] = None
     year: Optional[int] = None
     aiGenerated: bool = True

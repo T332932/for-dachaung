@@ -20,11 +20,14 @@ from models import orm
 from db import get_db
 from services.ai_service import AIService, get_ai_service
 from services.export_service import ExportService
+from services.rag_service import RAGService
 from utils.deps import get_current_user, require_role
+from templates import get_template
 
 
 router = APIRouter(tags=["teacher"])
 export_service = ExportService()
+rag_service = RAGService()
 
 # 默认提示词（可被前端修改）
 DEFAULT_PROMPT = """重要：questionText 只包含题干和选项，不要包含任何答案或解析；答案与解题步骤只放在 answer 字段。
@@ -154,12 +157,13 @@ async def ingest_and_create_question(
 @router.post("/questions", response_model=QuestionCreateResponse)
 async def create_question(
     payload: QuestionCreateRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: orm.User = Depends(require_role(["teacher", "admin"])),
 ):
     """
-    教师审核后提交题目入库的占位接口。
-    当前写入数据库（questions 表），返回生成的 ID。
+    教师审核后提交题目入库。
+    创建成功后会在后台异步生成 embedding 索引。
     """
     try:
         q = orm.Question(
@@ -181,6 +185,15 @@ async def create_question(
         db.add(q)
         db.commit()
         db.refresh(q)
+        
+        # 后台异步生成 embedding 索引
+        async def index_in_background(question_id: str):
+            from db import session_scope
+            with session_scope() as bg_db:
+                await rag_service.index_question(bg_db, question_id)
+        
+        background_tasks.add_task(index_in_background, q.id)
+        
         return QuestionCreateResponse(id=q.id, created=True, payload=payload)
     except Exception:
         db.rollback()
@@ -287,13 +300,24 @@ async def export_paper(
         )
         for pq in qlist
     ]
-    latex, attachments = export_service.build_latex(
-        paper,
-        qlist,
-        qmap,
-        include_answer=include_answer,
-        include_explanation=include_explanation,
-    )
+    tpl = get_template(paper.template_type) if paper.template_type else None
+    if tpl:
+        latex, attachments = export_service.build_latex_from_template(
+            paper,
+            qlist,
+            qmap,
+            tpl,
+            include_answer=include_answer,
+            include_explanation=include_explanation,
+        )
+    else:
+        latex, attachments = export_service.build_latex(
+            paper,
+            qlist,
+            qmap,
+            include_answer=include_answer,
+            include_explanation=include_explanation,
+        )
 
     payload = PaperView(
         id=paper.id,
@@ -360,6 +384,24 @@ async def create_paper(
         raise HTTPException(status_code=400, detail=f"question ids not found: {missing}")
 
     computed_total = sum(pq.score for pq in payload.questions)
+
+    # 模板校验与分值填充
+    tpl = get_template(payload.templateType) if payload.templateType else None
+    if tpl:
+        if len(payload.questions) != len(tpl.slots):
+            raise HTTPException(status_code=400, detail=f"template {payload.templateType} requires {len(tpl.slots)} questions")
+        sorted_slots = sorted(tpl.slots, key=lambda s: s.order)
+        sorted_pq = sorted(payload.questions, key=lambda s: s.order)
+        for idx, (slot, pq) in enumerate(zip(sorted_slots, sorted_pq)):
+            q = exist_map.get(pq.questionId)
+            if not q:
+                continue
+            if (q.question_type or "").lower() != slot.question_type:
+                raise HTTPException(status_code=400, detail=f"question {pq.questionId} type {q.question_type} does not match template {slot.question_type} at slot {slot.order}")
+            if pq.score is None or pq.score <= 0:
+                sorted_pq[idx].score = slot.default_score
+        payload.questions = sorted_pq
+        computed_total = sum(pq.score for pq in payload.questions)
 
     try:
         paper = orm.Paper(

@@ -351,6 +351,7 @@ export function QuestionEditor({ initialData, file, onSave, onCancel }: Question
                             onChange={(e) => setQuestionType(e.target.value)}
                         >
                             <option value="choice">choice</option>
+                            <option value="multi">multi</option>
                             <option value="fillblank">fillblank</option>
                             <option value="solve">solve</option>
                             <option value="proof">proof</option>

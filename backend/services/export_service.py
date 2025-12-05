@@ -4,8 +4,10 @@ import tempfile
 import uuid
 from pathlib import Path
 from typing import List, Mapping, Tuple
+import xml.etree.ElementTree as ET
 
 from models import orm
+from templates import PaperTemplate
 
 try:
     from docx import Document
@@ -25,6 +27,124 @@ class ExportService:
     - compile_pdf: 调用本地 pdflatex，如果不可用则返回错误。
     - build_docx: 使用 python-docx 生成 Word。
     """
+    def build_latex_from_template(
+        self,
+        paper: orm.Paper,
+        pq_list: List[orm.PaperQuestion],
+        question_map: Mapping[str, orm.Question],
+        template: PaperTemplate,
+        include_answer: bool = True,
+        include_explanation: bool = True,
+    ) -> Tuple[str, List[Tuple[str, bytes]]]:
+        """
+        基于模板分块生成 LaTeX（简化版，使用 enumerate + 分块标题）
+        """
+        header = r"""\documentclass[12pt]{ctexart}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry,graphicx,enumitem}
+\geometry{paperheight=26cm,paperwidth=18.4cm,left=2cm,right=2cm,top=1.5cm,bottom=2cm}
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+\begin{document}
+\begin{center}\Large %s\end{center}
+""" % self._escape_latex(paper.title)
+
+        attachments: List[Tuple[str, bytes]] = []
+        body_parts: List[str] = []
+
+        sections = self._sections_for_template(template)
+        # 建立 order -> PaperQuestion 映射
+        pq_by_order = {pq.order: pq for pq in pq_list}
+
+        for section in sections:
+            body_parts.append(r"{\bf %s}" % section["title"])
+            body_parts.append(
+                r"\begin{enumerate}[label=\arabic*.,start=%d,leftmargin=1.5em,itemsep=1em]"
+                % section["start"]
+            )
+            for slot in section["slots"]:
+                pq = pq_by_order.get(slot["order"])
+                if not pq:
+                    # 缺题直接占位
+                    body_parts.append(r"\item (%s分) \textit{缺题占位}" % slot["score"])
+                    continue
+                q = question_map.get(pq.question_id)
+                if not q:
+                    body_parts.append(r"\item (%s分) \textit{缺题占位}" % slot["score"])
+                    continue
+                item_lines = []
+                item_lines.append(r"\item (%s分) %s" % (pq.score or slot["score"], self._escape_latex(q.question_text)))
+                # 选项
+                if q.options:
+                    opts = []
+                    for opt in q.options:
+                        opts.append(self._escape_latex(opt))
+                    item_lines.append(r"\begin{enumerate}[label=\Alph*. ,leftmargin=1.2em,itemsep=0.2em]")
+                    for opt in opts:
+                        item_lines.append(r"\item %s" % opt)
+                    item_lines.append(r"\end{enumerate}")
+                # 图形
+                if q.has_geometry and q.geometry_tikz:
+                    item_lines.append("\n" + q.geometry_tikz + "\n")
+                elif q.has_geometry and q.geometry_svg:
+                    tikz_block = self._svg_to_tikz_block(q.geometry_svg)
+                    if tikz_block:
+                        item_lines.append("\n" + tikz_block + "\n")
+                    else:
+                        svg_result = self._svg_to_png_attachment(q.geometry_svg)
+                        if svg_result:
+                            fname, data = svg_result
+                            attachments.append((fname, data))
+                            item_lines.append(f'\n\\includegraphics[width=0.6\\textwidth]{{{fname}}}\n')
+                        else:
+                            item_lines.append("\n% SVG 转换失败，未插入图形\n")
+                # 答案/解析
+                if include_answer and q.answer:
+                    item_lines.append(r"\textbf{答案：} %s" % self._escape_latex(q.answer))
+                if include_explanation and q.explanation:
+                    item_lines.append(r"\textbf{解析：} %s" % self._escape_latex(q.explanation))
+                body_parts.append("\n".join(item_lines))
+            body_parts.append(r"\end{enumerate}")
+
+        footer = r"\end{document}"
+        return header + "\n\n".join(body_parts) + "\n" + footer, attachments
+
+    def _sections_for_template(self, template: PaperTemplate):
+        """
+        根据模板定义分块标题和槽位
+        """
+        if template.id == "gaokao_new_1":
+            sections = []
+            slots_sorted = sorted(template.slots, key=lambda s: s.order)
+            # 按 order 划分
+            sections.append({
+                "title": "一、选择题：本大题共 8 小题，每小题 5 分，共 40 分。",
+                "start": 1,
+                "slots": [{"order": s.order, "score": s.default_score} for s in slots_sorted if 1 <= s.order <= 8],
+            })
+            sections.append({
+                "title": "二、选择题（多选）：本题共 3 小题，每小题 6 分，共 18 分。",
+                "start": 9,
+                "slots": [{"order": s.order, "score": s.default_score} for s in slots_sorted if 9 <= s.order <= 11],
+            })
+            sections.append({
+                "title": "三、填空题：本大题共 3 小题，每小题 5 分，共 15 分。",
+                "start": 12,
+                "slots": [{"order": s.order, "score": s.default_score} for s in slots_sorted if 12 <= s.order <= 14],
+            })
+            sections.append({
+                "title": "四、解答题：本大题共 5 小题，共 77 分。",
+                "start": 15,
+                "slots": [{"order": s.order, "score": s.default_score} for s in slots_sorted if 15 <= s.order <= 19],
+            })
+            return sections
+        # 默认无分块
+        slots_sorted = sorted(template.slots, key=lambda s: s.order)
+        return [{
+            "title": "试卷",
+            "start": slots_sorted[0].order if slots_sorted else 1,
+            "slots": [{"order": s.order, "score": s.default_score} for s in slots_sorted],
+        }]
     def build_single_question_latex(
         self,
         question: dict,
@@ -243,6 +363,53 @@ class ExportService:
             return fname, png_bytes
         except Exception:
             return None
+
+    def _svg_to_tikz_block(self, svg_content: str) -> str | None:
+        """
+        将简单 SVG 转换为 TikZ 片段（支持 line/circle/ellipse/text 基础元素）。
+        若无法解析则返回 None。
+        """
+        if not svg_content:
+            return None
+        try:
+            root = ET.fromstring(svg_content)
+        except Exception:
+            return None
+
+        cmds: List[str] = []
+        scale = 0.02  # 将 400x400 缩放到约 8x8
+
+        def fmt(coord: str | None) -> float:
+            try:
+                return float(coord or "0.0")
+            except Exception:
+                return 0.0
+
+        for el in root.iter():
+            tag = el.tag.split("}")[-1].lower()
+            if tag == "line":
+                x1, y1 = fmt(el.get("x1")) * scale, fmt(el.get("y1")) * scale
+                x2, y2 = fmt(el.get("x2")) * scale, fmt(el.get("y2")) * scale
+                cmds.append(r"\draw (%.3f,%.3f) -- (%.3f,%.3f);" % (x1, -y1, x2, -y2))
+            elif tag == "circle":
+                cx, cy = fmt(el.get("cx")) * scale, fmt(el.get("cy")) * scale
+                r = fmt(el.get("r")) * scale
+                cmds.append(r"\draw (%.3f,%.3f) circle (%.3f);" % (cx, -cy, r))
+            elif tag == "ellipse":
+                cx, cy = fmt(el.get("cx")) * scale, fmt(el.get("cy")) * scale
+                rx, ry = fmt(el.get("rx")) * scale, fmt(el.get("ry")) * scale
+                cmds.append(r"\draw (%.3f,%.3f) ellipse (%.3f and %.3f);" % (cx, -cy, rx, ry))
+            elif tag == "text":
+                x, y = fmt(el.get("x")) * scale, fmt(el.get("y")) * scale
+                txt = (el.text or "").strip()
+                if txt:
+                    cmds.append(r"\node at (%.3f,%.3f) {%s};" % (x, -y, self._escape_latex(txt)))
+            # path 等复杂元素暂不处理
+
+        if not cmds:
+            return None
+        tikz = ["\\begin{tikzpicture}[scale=1]", *cmds, "\\end{tikzpicture}"]
+        return "\n".join(tikz)
 
     def svg_to_png_base64(self, svg_content: str) -> str | None:
         """
