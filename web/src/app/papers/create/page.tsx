@@ -52,6 +52,12 @@ export default function CreatePaperPage() {
     const [searchResults, setSearchResults] = useState<Question[]>([]);
     const [searching, setSearching] = useState(false);
 
+    // 分页状态
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMore, setHasMore] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const PAGE_SIZE = 20;
+
     // 已选题目
     const [selectedQuestions, setSelectedQuestions] = useState<SelectedQuestion[]>([]);
 
@@ -83,16 +89,34 @@ export default function CreatePaperPage() {
     };
 
     // 加载题目列表（备选）
-    const loadQuestionList = async () => {
-        setSearching(true);
+    const loadQuestionList = async (page = 1, append = false) => {
+        if (append) {
+            setLoadingMore(true);
+        } else {
+            setSearching(true);
+            setCurrentPage(1);
+        }
         try {
-            const result = await questionApi.list({ limit: 20 });
-            setSearchResults(result.items || []);
+            const result = await questionApi.list({ limit: PAGE_SIZE, page });
+            const items = result.items || [];
+            if (append) {
+                setSearchResults(prev => [...prev, ...items]);
+            } else {
+                setSearchResults(items);
+            }
+            setCurrentPage(page);
+            setHasMore(items.length === PAGE_SIZE);
         } catch (error) {
             console.error('Failed to load questions:', error);
         } finally {
             setSearching(false);
+            setLoadingMore(false);
         }
+    };
+
+    // 加载更多
+    const loadMore = () => {
+        loadQuestionList(currentPage + 1, true);
     };
 
     // 添加题目到试卷
@@ -245,7 +269,7 @@ export default function CreatePaperPage() {
                                 </Button>
                                 <Button
                                     variant="outline"
-                                    onClick={loadQuestionList}
+                                    onClick={() => loadQuestionList()}
                                     disabled={searching}
                                 >
                                     全部
@@ -293,6 +317,24 @@ export default function CreatePaperPage() {
                                         </div>
                                     </div>
                                 ))
+                            )}
+                            {/* 加载更多按钮 */}
+                            {!searching && searchResults.length > 0 && hasMore && (
+                                <div className="text-center py-4">
+                                    <Button
+                                        variant="outline"
+                                        onClick={loadMore}
+                                        disabled={loadingMore}
+                                        className="w-full"
+                                    >
+                                        {loadingMore ? '加载中...' : '加载更多'}
+                                    </Button>
+                                </div>
+                            )}
+                            {!searching && searchResults.length > 0 && !hasMore && (
+                                <div className="text-center py-4 text-muted-foreground text-sm">
+                                    已加载全部 {searchResults.length} 道题目
+                                </div>
                             )}
                         </div>
                     </Card>
