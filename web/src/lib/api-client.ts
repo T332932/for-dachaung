@@ -299,6 +299,18 @@ export const questionApi = {
     const response = await api.delete(`/api/teacher/questions/${id}`);
     return response.data;
   },
+
+  // 一键入库：上传 → AI 分析 → 自动保存
+  ingest: async (file: File): Promise<{ id: string; created: boolean }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/api/teacher/questions/ingest', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 };
 
 // 试卷相关 API

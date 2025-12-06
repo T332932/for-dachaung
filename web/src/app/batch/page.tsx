@@ -6,7 +6,7 @@ import { MathText } from '@/components/ui/MathText';
 import { QuestionAnalysisResult } from '@/components/question/QuestionUploader';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
-type ItemStatus = 'pending' | 'processing' | 'ready' | 'error' | 'saved';
+type ItemStatus = 'pending' | 'processing' | 'ready' | 'error' | 'saved' | 'ingesting';
 
 interface QueueItem {
   id: string;
@@ -60,6 +60,32 @@ export default function BatchUploader() {
       if (it.status === 'pending' || it.status === 'error') {
         // eslint-disable-next-line no-await-in-loop
         await runPreview(it);
+      }
+    }
+    setIsUploading(false);
+  };
+
+  // 快速入库模式：上传 → AI分析 → 自动保存
+  const ingestItem = async (item: QueueItem) => {
+    setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, status: 'ingesting', error: undefined } : it)));
+    try {
+      await questionApi.ingest(item.file);
+      setItems((prev) =>
+        prev.map((it) => (it.id === item.id ? { ...it, status: 'saved', error: undefined } : it)),
+      );
+    } catch (err: any) {
+      setItems((prev) =>
+        prev.map((it) => (it.id === item.id ? { ...it, status: 'error', error: err?.userMessage || err?.message || '入库失败' } : it)),
+      );
+    }
+  };
+
+  // 快速入库所有
+  const ingestAll = async () => {
+    setIsUploading(true);
+    for (const it of items) {
+      if (it.status === 'pending' || it.status === 'error') {
+        await ingestItem(it);
       }
     }
     setIsUploading(false);
@@ -134,15 +160,25 @@ export default function BatchUploader() {
               onChange={(e) => addFiles(e.target.files)}
             />
           </div>
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex gap-2 flex-wrap">
             <button
               onClick={runAll}
               disabled={isUploading || items.length === 0}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 disabled:opacity-50 font-medium"
+            >
+              {isUploading ? '处理中…' : '解析预览'}
+            </button>
+            <button
+              onClick={ingestAll}
+              disabled={isUploading || items.length === 0}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 font-medium"
             >
-              {isUploading ? '解析中…' : '解析全部'}
+              {isUploading ? '处理中…' : '✨ 快速入库（无需预览）'}
             </button>
           </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            💡 “快速入库”模式会自动分析并保存到题库，您可以离开页面，稍后在题库中查看
+          </p>
         </div>
 
         <div className="space-y-4">
@@ -151,7 +187,14 @@ export default function BatchUploader() {
               <div className="flex justify-between items-center">
                 <div>
                   <div className="font-medium text-foreground">{item.name}</div>
-                  <div className="text-xs text-muted-foreground">状态：{item.status}</div>
+                  <div className="text-xs text-muted-foreground">
+                    状态：{item.status === 'pending' ? '待处理' :
+                      item.status === 'processing' ? '解析中...' :
+                        item.status === 'ingesting' ? '入库中...' :
+                          item.status === 'ready' ? '已解析' :
+                            item.status === 'saved' ? '✅ 已入库' :
+                              '❌ 失败'}
+                  </div>
                   {item.error && <div className="text-xs text-destructive">错误：{item.error}</div>}
                 </div>
                 <div className="space-x-2">
@@ -162,11 +205,18 @@ export default function BatchUploader() {
                     重新生成
                   </button>
                   <button
+                    onClick={() => ingestItem(item)}
+                    disabled={item.status === 'saved' || item.status === 'ingesting'}
+                    className="px-3 py-1 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50"
+                  >
+                    快速入库
+                  </button>
+                  <button
                     onClick={() => saveItem(item)}
                     disabled={!validateForSave(item.result) || item.status !== 'ready'}
                     className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm disabled:opacity-50"
                   >
-                    入库
+                    审核后入库
                   </button>
                 </div>
               </div>
