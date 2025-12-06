@@ -718,9 +718,12 @@ class ExportService:
         连续下划线（____）作为填空横线处理。
         """
         import re
-        # 先将连续下划线替换为 LaTeX 填空横线
-        text = re.sub(r'_{2,}', r'\\underline{\\hspace{2em}}', text)
         
+        # 使用占位符保护连续下划线，避免被逐字符转义
+        BLANK_PLACEHOLDER = "\x00BLANK\x00"
+        text = re.sub(r'_{2,}', BLANK_PLACEHOLDER, text)
+        
+        # 转义特殊字符
         replacements = {
             "&": r"\&",
             "%": r"\%",
@@ -732,14 +735,10 @@ class ExportService:
             "^": r"\^{}",
         }
         out = []
-        i = 0
-        while i < len(text):
-            # 检查是否是转义序列（已经处理过的 \underline 等）
-            if text[i] == '\\' and i + 1 < len(text):
-                # 保留反斜杠及后续字符
-                out.append(text[i])
-                i += 1
-                continue
-            out.append(replacements.get(text[i], text[i]))
-            i += 1
-        return "".join(out)
+        for ch in text:
+            out.append(replacements.get(ch, ch))
+        result = "".join(out)
+        
+        # 将占位符替换为 LaTeX 填空横线
+        result = result.replace(BLANK_PLACEHOLDER, r"\underline{\hspace{2em}}")
+        return result
