@@ -362,3 +362,28 @@ export const paperApi = {
     return response.data;
   },
 };
+
+// 管理员相关 API
+export const adminApi = {
+  // 获取审核列表
+  getReviews: async (status: string = 'pending') => {
+    const response = await api.get('/api/teacher/admin/publish-reviews', {
+      params: { status },
+    });
+    return response.data;
+  },
+
+  // 批准发布
+  approveReview: async (reviewId: string) => {
+    const response = await api.post(`/api/teacher/admin/publish-reviews/${reviewId}/approve`);
+    return response.data;
+  },
+
+  // 拒绝发布
+  rejectReview: async (reviewId: string, notes?: string) => {
+    const response = await api.post(`/api/teacher/admin/publish-reviews/${reviewId}/reject`, null, {
+      params: { notes },
+    });
+    return response.data;
+  },
+};

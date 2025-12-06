@@ -13,7 +13,8 @@ import {
     User,
     PlusCircle,
     Upload,
-    Settings
+    Settings,
+    ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/lib/api-client';
@@ -50,6 +51,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { href: '/papers', label: '我的试卷', icon: <FileText className="w-5 h-5" /> },
         { href: '/settings', label: '个人设置', icon: <Settings className="w-5 h-5" /> },
     ];
+
+    // 管理员入口
+    if ((user as any)?.role === 'admin') {
+        navItems.splice(3, 0, {
+            href: '/admin/reviews',
+            label: '发布审核',
+            icon: <ShieldAlert className="w-5 h-5" />
+        });
+    }
 
     return (
         <div className="min-h-screen bg-background flex">
