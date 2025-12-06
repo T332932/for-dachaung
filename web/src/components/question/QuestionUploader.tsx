@@ -53,11 +53,47 @@ SVG 生成要求：
 - 文本标注用 <text> 标签，内容为数学符号
 - viewBox="0 0 400 400"，坐标准确`;
 
+// 播放提示音
+const playNotificationSound = () => {
+    try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (e) {
+        console.log('Audio not supported');
+    }
+};
+
 export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAnalysisResult, file: File) => void }) {
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'analyzing'>('idle');
     const [dragActive, setDragActive] = useState(false);
     const [showPromptEditor, setShowPromptEditor] = useState(false);
     const [customPrompt, setCustomPrompt] = useState(DEFAULT_PROMPT);
+
+    // 上传中离开页面警告
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isUploading) {
+                e.preventDefault();
+                e.returnValue = '正在识别题目，离开页面会中断识别，确定要离开吗？';
+                return e.returnValue;
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isUploading]);
 
     // 尝试从localStorage加载保存的提示词
     useEffect(() => {
@@ -113,7 +149,11 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
         }
 
         setIsUploading(true);
+        setUploadStatus('uploading');
         try {
+            // 上传完成，开始 AI 分析
+            setUploadStatus('analyzing');
+
             // 使用自定义提示词（如果与默认不同）
             const promptToUse = customPrompt !== DEFAULT_PROMPT ? customPrompt : undefined;
             const result = await questionApi.preview(file, { customPrompt: promptToUse });
@@ -141,6 +181,10 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
                 throw new Error('AI返回数据不完整：缺少题目内容或答案');
             }
 
+            // 播放提示音通知用户
+            playNotificationSound();
+            toast.success('题目识别完成！');
+
             onAnalyzed(merged, file);
         } catch (error: any) {
             console.error('Analysis failed:', error);
@@ -148,6 +192,7 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
             toast.error(errorMessage);
         } finally {
             setIsUploading(false);
+            setUploadStatus('idle');
         }
     }, [onAnalyzed, isUploading, customPrompt]);
 
@@ -259,8 +304,12 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
                                     <Loader2 className="w-12 h-12 text-primary animate-spin relative z-10" />
                                 </div>
                                 <div className="text-center space-y-1">
-                                    <p className="font-medium text-foreground">正在智能分析题目...</p>
-                                    <p className="text-xs text-muted-foreground">识别文字、公式与几何图形</p>
+                                    <p className="font-medium text-foreground">
+                                        {uploadStatus === 'uploading' ? '正在上传图片...' : 'AI 智能分析中...'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {uploadStatus === 'uploading' ? '请稍候，正在上传文件' : '识别文字、公式与几何图形'}
+                                    </p>
                                 </div>
                             </div>
                         ) : (
