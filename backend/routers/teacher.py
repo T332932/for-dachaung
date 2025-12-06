@@ -449,26 +449,33 @@ async def search_questions_semantic(
     需要配置 SILICONFLOW_API_KEY 环境变量。
     """
     try:
-        results = await rag_service.search_similar(db, query, top_k=topK)
-        # 转换为前端需要的格式
+        results = await rag_service.search_similar(db, query, top_k=topK * 2)  # 多搜一些，后面过滤
+        # 转换为前端需要的格式（只返回公共题目 + 用户自己的题目）
         questions = []
         for r in results:
             q = db.query(orm.Question).filter(orm.Question.id == r["id"]).first()
-            if q:
-                # options 和 knowledge_points 可能已经是 list（PostgreSQL JSON 字段），也可能是字符串
-                options = q.options if isinstance(q.options, list) else (json.loads(q.options) if q.options else None)
-                kp = q.knowledge_points if isinstance(q.knowledge_points, list) else (json.loads(q.knowledge_points) if q.knowledge_points else [])
-                questions.append({
-                    "id": q.id,
-                    "questionText": q.question_text,
-                    "options": options,
-                    "answer": q.answer,
-                    "questionType": q.question_type,
-                    "difficulty": q.difficulty,
-                    "knowledgePoints": kp,
-                    "isPublic": q.is_public,
-                    "similarity": r.get("similarity", 0),
-                })
+            if not q:
+                continue
+            # 权限过滤：公共题目 或 自己创建的题目
+            if not q.is_public and q.created_by != current_user.id:
+                continue
+            # options 和 knowledge_points 可能已经是 list（PostgreSQL JSON 字段），也可能是字符串
+            options = q.options if isinstance(q.options, list) else (json.loads(q.options) if q.options else None)
+            kp = q.knowledge_points if isinstance(q.knowledge_points, list) else (json.loads(q.knowledge_points) if q.knowledge_points else [])
+            questions.append({
+                "id": q.id,
+                "questionText": q.question_text,
+                "options": options,
+                "answer": q.answer,
+                "questionType": q.question_type,
+                "difficulty": q.difficulty,
+                "knowledgePoints": kp,
+                "isPublic": q.is_public,
+                "similarity": r.get("similarity", 0),
+            })
+            # 达到请求数量后停止
+            if len(questions) >= topK:
+                break
         return questions
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"搜索失败: {str(e)}")

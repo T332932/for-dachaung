@@ -393,70 +393,86 @@ export default function CreatePaperPage() {
                                 </h2>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-secondary/10">
+                            <div className="flex-1 overflow-y-auto">
                                 {selectedQuestions.length === 0 ? (
                                     <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-2">
                                         <Plus className="w-8 h-8 opacity-20" />
                                         从左侧搜索并添加题目
                                     </div>
                                 ) : (
-                                    selectedQuestions.map((q, idx) => (
-                                        <div key={q.id} className="bg-card border border-border rounded-xl p-4 group hover:shadow-sm transition-all">
-                                            <div className="flex justify-between items-center mb-3 pb-3 border-b border-border/50">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="w-6 h-6 bg-primary/10 text-primary rounded-md flex items-center justify-center text-sm font-bold">
-                                                        {q.order}
-                                                    </span>
-                                                    <span className={`px-2 py-0.5 text-xs rounded-md font-medium ${q.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                                        q.difficulty === 'hard' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
-                                                            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                                        }`}>
-                                                        {difficultyLabel(q.difficulty)}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => moveQuestion(q.id, 'up')}
-                                                        disabled={idx === 0}
-                                                        className="h-7 w-7 p-0"
-                                                    >
-                                                        <ArrowUp className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => moveQuestion(q.id, 'down')}
-                                                        disabled={idx === selectedQuestions.length - 1}
-                                                        className="h-7 w-7 p-0"
-                                                    >
-                                                        <ArrowDown className="w-4 h-4" />
-                                                    </Button>
-                                                    <div className="flex items-center gap-1 mx-2">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-secondary/30 sticky top-0">
+                                            <tr className="text-left">
+                                                <th className="py-2 px-3 w-12 text-center">#</th>
+                                                <th className="py-2 px-3">题干预览</th>
+                                                <th className="py-2 px-3 w-20 text-center">难度</th>
+                                                <th className="py-2 px-3 w-24 text-center">分值</th>
+                                                <th className="py-2 px-3 w-24 text-center">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {selectedQuestions.map((q, idx) => (
+                                                <tr key={q.id} className="border-b border-border/50 hover:bg-secondary/20 group">
+                                                    <td className="py-2 px-3 text-center">
+                                                        <span className="w-6 h-6 bg-primary/10 text-primary rounded flex items-center justify-center text-xs font-bold mx-auto">
+                                                            {q.order}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-2 px-3">
+                                                        <div className="line-clamp-1 text-foreground/80 cursor-help" title={(q.questionText || '').slice(0, 300)}>
+                                                            <MathText>{(q.questionText || '').slice(0, 60)}</MathText>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-2 px-3 text-center">
+                                                        <span className={`px-1.5 py-0.5 text-xs rounded ${q.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                                q.difficulty === 'hard' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                                                                    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                            }`}>
+                                                            {difficultyLabel(q.difficulty)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-2 px-3 text-center">
                                                         <Input
                                                             type="number"
                                                             value={q.score}
                                                             onChange={(e) => updateScore(q.id, Number(e.target.value) || 0)}
-                                                            className="w-16 h-7 text-center px-1"
+                                                            className="w-14 h-6 text-center px-1 text-xs"
                                                         />
-                                                        <span className="text-xs text-muted-foreground">分</span>
-                                                    </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => removeQuestion(q.id)}
-                                                        className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                            <div className="text-sm text-foreground/80 line-clamp-2">
-                                                <MathText>{(q.questionText || '').slice(0, 150)}</MathText>
-                                            </div>
-                                        </div>
-                                    ))
+                                                    </td>
+                                                    <td className="py-2 px-3 text-center">
+                                                        <div className="flex items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => moveQuestion(q.id, 'up')}
+                                                                disabled={idx === 0}
+                                                                className="h-6 w-6 p-0"
+                                                            >
+                                                                <ArrowUp className="w-3 h-3" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => moveQuestion(q.id, 'down')}
+                                                                disabled={idx === selectedQuestions.length - 1}
+                                                                className="h-6 w-6 p-0"
+                                                            >
+                                                                <ArrowDown className="w-3 h-3" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => removeQuestion(q.id)}
+                                                                className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 )}
                             </div>
                         </Card>
