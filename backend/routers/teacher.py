@@ -30,12 +30,25 @@ export_service = ExportService()
 rag_service = RAGService()
 
 # 默认提示词（可被前端修改）
-DEFAULT_PROMPT = """重要：questionText 只包含题干和选项，不要包含任何答案或解析；答案与解题步骤只放在 answer 字段。
-SVG 生成要求：
-- 使用 <line>, <circle>, <ellipse>, <path>, <text> 标签
-- 虚线用 stroke-dasharray="5,5"
-- 文本标注用 <text> 标签，内容为数学符号
-- viewBox="0 0 400 400"，坐标准确"""
+DEFAULT_PROMPT = """### 任务核心要求
+1. **题目部分（questionText）**：
+   - 仅包含高考数学题干，无答案/解析，数学符号用LaTeX格式且单行完整书写。
+
+2. **答案部分（answer）**：
+   - 严格按"【答案】【分析】【详解】"结构，**所有公式/文本必须以完整单行形式呈现，禁止任何拆分、换行**：
+     1. 【答案】：分小问写最终结果，公式完整无拆分；
+     2. 【分析】：单行说明解题思路，无换行；
+     3. 【详解】：分小问推导，每一个公式（如$\\frac{a}{\\sin A}=\\frac{c}{\\sin C}$）必须完整写在一行，禁止拆分，推导逻辑连贯无换行。
+
+3. **SVG部分**：
+   - 仅用 <line>, <circle>, <ellipse>, <path>, <text> 标签
+   - 虚线用 stroke-dasharray="5,5"
+   - 文本标注用 <text> 标签，内容为数学符号
+   - viewBox="0 0 400 400"，坐标准确
+
+### 格式强制约束
+- answer中所有公式必须作为完整文本单行呈现，禁止拆分/换行；
+- 文本内容紧凑连贯，无无意义断行。"""
 
 
 @router.get("/prompt/default")
