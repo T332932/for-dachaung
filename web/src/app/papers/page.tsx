@@ -135,7 +135,11 @@ export default function PaperBuilder() {
                     <td className="px-4 py-3 font-mono text-muted-foreground">{row.order}</td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-1 rounded-md bg-secondary text-xs font-medium">
-                        {row.questionType}
+                        {row.questionType === 'choice' ? '选择题' :
+                          row.questionType === 'multi' ? '多选题' :
+                            row.questionType === 'fillblank' ? '填空题' :
+                              row.questionType === 'solve' ? '解答题' :
+                                row.questionType === 'proof' ? '证明题' : row.questionType}
                       </span>
                     </td>
                     <td className="px-4 py-3">
