@@ -433,6 +433,7 @@ class ExportService:
         
         # 按顺序输出各类型题目
         question_number = 0
+        first_section = True
         for section_type in SECTION_ORDER:
             if section_type not in questions_by_type:
                 continue
@@ -442,11 +443,16 @@ class ExportService:
             # 添加章节标题（如果有多种题型）
             if has_multiple_types:
                 section_name = SECTION_NAMES.get(section_type, section_type)
-                section_items.append(r"\end{enumerate}")
+                if not first_section:
+                    # 非第一个章节，需要先关闭上一个 enumerate
+                    section_items.append(r"\end{enumerate}")
                 section_items.append(r"\vspace{1em}")
                 section_items.append(r"\noindent\textbf{%s}" % section_name)
                 section_items.append(r"\vspace{0.5em}")
-                section_items.append(r"\begin{enumerate}[leftmargin=0em,label=\arabic*.,itemsep=1em,start=%d]" % (question_number + 1))
+                if not first_section:
+                    # 非第一个章节，需要重新开始 enumerate 并设置起始编号
+                    section_items.append(r"\begin{enumerate}[leftmargin=0em,label=\arabic*.,itemsep=1em,start=%d]" % (question_number + 1))
+                first_section = False
             
             for pq, q in questions_by_type[section_type]:
                 question_number += 1
