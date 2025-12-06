@@ -256,20 +256,26 @@ export default function UploadPage() {
         </div>
 
         <div className="p-6 rounded-xl border border-border bg-card">
-          <div
-            className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+          <label
+            className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors block"
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
           >
-            <p className="font-medium text-foreground mb-2">拖拽或点击选择图片文件</p>
+            <div className="flex flex-col items-center gap-2">
+              <svg className="w-10 h-10 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p className="font-medium text-foreground">拖拽或点击选择图片文件</p>
+              <p className="text-sm text-muted-foreground">支持多选</p>
+            </div>
             <input
               type="file"
               multiple
               accept="image/*"
-              className="mt-2"
+              className="hidden"
               onChange={(e) => addFiles(e.target.files)}
             />
-          </div>
+          </label>
           <div className="mt-4 flex gap-2 flex-wrap">
             <button
               onClick={runAll}
