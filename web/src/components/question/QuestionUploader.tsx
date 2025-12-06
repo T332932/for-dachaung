@@ -103,6 +103,89 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
         }
     }, []);
 
+    // 页面加载时恢复未完成的任务
+    useEffect(() => {
+        const resumePendingTask = async () => {
+            const pendingTaskJson = localStorage.getItem('zujuan_pending_task');
+            if (!pendingTaskJson) return;
+
+            try {
+                const pendingTask = JSON.parse(pendingTaskJson);
+                const { taskId, fileName, timestamp } = pendingTask;
+
+                // 检查任务是否超过 10 分钟（过期任务不恢复）
+                if (Date.now() - timestamp > 10 * 60 * 1000) {
+                    localStorage.removeItem('zujuan_pending_task');
+                    return;
+                }
+
+                // 恢复轮询状态
+                setIsUploading(true);
+                setUploadStatus('analyzing');
+                toast.info(`正在恢复 "${fileName}" 的解析任务...`);
+
+                // 继续轮询
+                let result = null;
+                let attempts = 0;
+                const maxAttempts = 180;
+
+                while (attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    attempts++;
+
+                    try {
+                        const status = await questionApi.getTaskStatus(taskId);
+
+                        if (status.status === 'completed') {
+                            result = status.result;
+                            break;
+                        } else if (status.status === 'failed') {
+                            throw new Error(status.error || 'AI 分析失败');
+                        }
+                    } catch (e: any) {
+                        // 任务不存在（服务器重启），清除并退出
+                        if (e?.response?.status === 404) {
+                            localStorage.removeItem('zujuan_pending_task');
+                            toast.error('解析任务已过期，请重新上传');
+                            setIsUploading(false);
+                            setUploadStatus('idle');
+                            return;
+                        }
+                        throw e;
+                    }
+                }
+
+                localStorage.removeItem('zujuan_pending_task');
+
+                if (result) {
+                    const analysisData = result.analysis || result;
+                    const merged: QuestionAnalysisResult = {
+                        ...analysisData,
+                        svgPng: result?.svgPng || null,
+                        latex: result?.latex,
+                        similarQuestions: result?.similarQuestions || [],
+                    };
+
+                    playNotificationSound();
+                    toast.success('题目识别完成！');
+
+                    // 创建一个虚拟文件对象（用于回调）
+                    const fakeFile = new File([], fileName, { type: 'image/jpeg' });
+                    onAnalyzed(merged, fakeFile);
+                }
+            } catch (error: any) {
+                console.error('Resume task failed:', error);
+                toast.error('恢复任务失败：' + (error?.message || '未知错误'));
+                localStorage.removeItem('zujuan_pending_task');
+            } finally {
+                setIsUploading(false);
+                setUploadStatus('idle');
+            }
+        };
+
+        resumePendingTask();
+    }, [onAnalyzed]);
+
     // 保存提示词到localStorage
     const savePrompt = () => {
         localStorage.setItem('zujuan_custom_prompt', customPrompt);
@@ -160,6 +243,13 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
             // 使用异步 API：先提交任务，然后轮询结果
             const { taskId } = await questionApi.previewAsync(file, { customPrompt: promptToUse });
 
+            // 保存任务信息到 localStorage（用于刷新恢复）
+            localStorage.setItem('zujuan_pending_task', JSON.stringify({
+                taskId,
+                fileName: file.name,
+                timestamp: Date.now(),
+            }));
+
             // 轮询任务状态
             let result = null;
             let attempts = 0;
@@ -179,6 +269,9 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
                 }
                 // 继续等待，pending 或 processing 状态
             }
+
+            // 任务完成，清除 localStorage
+            localStorage.removeItem('zujuan_pending_task');
 
             if (!result) {
                 throw new Error('AI 分析超时，请重试');
@@ -216,6 +309,8 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
             console.error('Analysis failed:', error);
             const errorMessage = error?.userMessage || error?.message || '题目识别失败，请重试';
             toast.error(errorMessage);
+            // 失败时也清除 localStorage
+            localStorage.removeItem('zujuan_pending_task');
         } finally {
             setIsUploading(false);
             setUploadStatus('idle');
