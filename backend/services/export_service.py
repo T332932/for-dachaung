@@ -480,7 +480,8 @@ class ExportService:
                 )
                 log = proc.stdout + "\n" + proc.stderr
                 pdf_file = tmp_path / "paper.pdf"
-                if proc.returncode == 0 and pdf_file.exists():
+                # 只要 PDF 存在就算成功（LaTeX 警告会导致非零返回码）
+                if pdf_file.exists():
                     # 安全创建临时文件保存结果
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_out:
                         tmp_out.write(pdf_file.read_bytes())
