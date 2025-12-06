@@ -42,7 +42,7 @@ DEFAULT_PROMPT = """你是一个高考数学题目解析专家。请分析图片
   "questionText": "题干内容，数学公式用 $...$ 包裹",
   "options": ["A. 选项内容", "B. ...", "C. ...", "D. ..."],
   "answer": "【答案】...\n【分析】...\n【详解】...",
-  "questionType": "choice/fill/solve",
+  "questionType": "choice/multi/fillblank/solve/proof",
   "difficulty": "easy/medium/hard",
   "knowledgePoints": ["知识点1", "知识点2"],
   "hasGeometry": true,
@@ -85,9 +85,11 @@ DEFAULT_PROMPT = """你是一个高考数学题目解析专家。请分析图片
   - 坐标轴用黑色，曲线用蓝色
 
 ### 5. questionType（题型）
-- choice: 选择题（单选或多选）
-- fill: 填空题
+- choice: 单选题
+- multi: 多选题（答案可能是 AB, ABC, ACD 等多个字母）
+- fillblank: 填空题
 - solve: 解答题
+- proof: 证明题
 
 ### 6. isHighSchool（学段）
 - 高中数学题返回 true，其他返回 false
