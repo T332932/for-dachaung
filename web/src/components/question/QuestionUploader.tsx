@@ -156,7 +156,33 @@ export function QuestionUploader({ onAnalyzed }: { onAnalyzed: (data: QuestionAn
 
             // 使用自定义提示词（如果与默认不同）
             const promptToUse = customPrompt !== DEFAULT_PROMPT ? customPrompt : undefined;
-            const result = await questionApi.preview(file, { customPrompt: promptToUse });
+
+            // 使用异步 API：先提交任务，然后轮询结果
+            const { taskId } = await questionApi.previewAsync(file, { customPrompt: promptToUse });
+
+            // 轮询任务状态
+            let result = null;
+            let attempts = 0;
+            const maxAttempts = 180; // 最多等待 6 分钟（180 * 2秒）
+
+            while (attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 每 2 秒查询一次
+                attempts++;
+
+                const status = await questionApi.getTaskStatus(taskId);
+
+                if (status.status === 'completed') {
+                    result = status.result;
+                    break;
+                } else if (status.status === 'failed') {
+                    throw new Error(status.error || 'AI 分析失败');
+                }
+                // 继续等待，pending 或 processing 状态
+            }
+
+            if (!result) {
+                throw new Error('AI 分析超时，请重试');
+            }
 
             // 检查返回结构
             if (!result) {

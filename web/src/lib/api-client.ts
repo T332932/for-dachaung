@@ -240,6 +240,48 @@ export const questionApi = {
     };
   },
 
+  // 异步上传并分析（解决 Cloudflare 100s 超时）
+  previewAsync: async (file: File, opts?: { includeAnswer?: boolean; includeExplanation?: boolean; customPrompt?: string }): Promise<{
+    taskId: string;
+    status: string;
+  }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post(
+      '/api/teacher/questions/preview-async',
+      formData,
+      {
+        params: {
+          format: 'json',
+          include_answer: opts?.includeAnswer ?? true,
+          include_explanation: opts?.includeExplanation ?? false,
+          custom_prompt: opts?.customPrompt ?? undefined,
+        },
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+
+  // 查询异步任务状态
+  getTaskStatus: async (taskId: string): Promise<{
+    taskId: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    progress: number;
+    result?: {
+      analysis?: Record<string, unknown>;
+      latex?: string;
+      svgPng?: string | null;
+      similarQuestions?: Array<{ id: string; questionText: string; similarity: number; difficulty?: string }>;
+    };
+    error?: string;
+  }> => {
+    const response = await api.get(`/api/teacher/tasks/${taskId}/status`);
+    return response.data;
+  },
+
   // 下载单题 PDF 预览
   previewPdf: async (file: File, opts?: { includeAnswer?: boolean; includeExplanation?: boolean }) => {
     const formData = new FormData();

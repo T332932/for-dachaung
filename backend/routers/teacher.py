@@ -29,6 +29,9 @@ router = APIRouter(tags=["teacher"])
 export_service = ExportService()
 rag_service = RAGService()
 
+# 导入任务管理器
+from services.task_service import task_manager, TaskStatus
+
 # 默认提示词（可被前端修改）
 DEFAULT_PROMPT = """### 任务核心要求
 1. **题目部分（questionText）**：
@@ -140,6 +143,145 @@ async def preview_question(
         "similarQuestions": similar_questions,  # 相似题列表
     }
 
+
+# ===== 异步分析接口（解决 Cloudflare 100s 超时）=====
+
+import tempfile
+import shutil
+
+@router.post("/questions/preview-async")
+async def preview_question_async(
+    file: UploadFile = File(...),
+    format: str = Query("json", pattern="^(json|pdf)$"),
+    include_answer: bool = Query(True),
+    include_explanation: bool = Query(False),
+    custom_prompt: str = Query(None, description="自定义提示词（可选）"),
+    background_tasks: BackgroundTasks = None,
+):
+    """
+    异步版本的题目预览：立即返回 task_id，后台处理 AI 分析。
+    前端通过 GET /tasks/{task_id}/status 轮询结果。
+    """
+    # 1. 创建任务
+    task_id = task_manager.create_task()
+    
+    # 2. 保存上传文件到临时目录（因为后台任务无法访问 UploadFile）
+    temp_dir = tempfile.mkdtemp()
+    temp_file_path = Path(temp_dir) / file.filename
+    with open(temp_file_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    
+    # 3. 启动后台任务
+    bg = background_tasks or BackgroundTasks()
+    bg.add_task(
+        _process_preview_task,
+        task_id=task_id,
+        file_path=str(temp_file_path),
+        format=format,
+        include_answer=include_answer,
+        include_explanation=include_explanation,
+        custom_prompt=custom_prompt,
+        temp_dir=temp_dir,
+    )
+    
+    # 4. 立即返回 task_id
+    return {"taskId": task_id, "status": "pending"}
+
+
+async def _process_preview_task(
+    task_id: str,
+    file_path: str,
+    format: str,
+    include_answer: bool,
+    include_explanation: bool,
+    custom_prompt: str,
+    temp_dir: str,
+):
+    """后台任务：处理 AI 分析"""
+    import asyncio
+    from fastapi import UploadFile
+    from io import BytesIO
+    
+    try:
+        task_manager.update_status(task_id, TaskStatus.PROCESSING, progress=10)
+        
+        # 读取文件
+        with open(file_path, "rb") as f:
+            file_content = f.read()
+        
+        # 创建模拟的 UploadFile 对象
+        class FakeUploadFile:
+            def __init__(self, content: bytes, filename: str):
+                self.file = BytesIO(content)
+                self.filename = filename
+                self.content_type = "image/jpeg"
+            async def read(self):
+                return self.file.read()
+        
+        fake_file = FakeUploadFile(file_content, Path(file_path).name)
+        
+        # 执行 AI 分析
+        task_manager.update_status(task_id, TaskStatus.PROCESSING, progress=30)
+        ai_service = get_ai_service()
+        analysis = await ai_service.analyze(fake_file, custom_prompt=custom_prompt)
+        
+        task_manager.update_status(task_id, TaskStatus.PROCESSING, progress=70)
+        
+        # 生成 LaTeX
+        latex, attachments = export_service.build_single_question_latex(
+            analysis, include_answer=include_answer, include_explanation=include_explanation
+        )
+        
+        # 生成 SVG PNG 预览
+        svg_png = None
+        if analysis.get("hasGeometry"):
+            svg_png = export_service.svg_to_png_base64(analysis.get("geometrySvg"))
+        
+        task_manager.update_status(task_id, TaskStatus.PROCESSING, progress=90)
+        
+        # 组装结果
+        result = {
+            "analysis": analysis,
+            "latex": latex,
+            "svgPng": svg_png,
+            "similarQuestions": [],  # 异步模式暂不做相似题搜索
+        }
+        
+        task_manager.update_status(task_id, TaskStatus.COMPLETED, result=result, progress=100)
+        
+    except Exception as e:
+        task_manager.update_status(task_id, TaskStatus.FAILED, error=str(e))
+    
+    finally:
+        # 清理临时文件
+        try:
+            shutil.rmtree(temp_dir)
+        except:
+            pass
+
+
+@router.get("/tasks/{task_id}/status")
+async def get_task_status(task_id: str):
+    """
+    查询异步任务状态。
+    返回：status, progress, result(如果完成), error(如果失败)
+    """
+    task = task_manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    response = {
+        "taskId": task.id,
+        "status": task.status.value,
+        "progress": task.progress,
+    }
+    
+    if task.status == TaskStatus.COMPLETED:
+        response["result"] = task.result
+    elif task.status == TaskStatus.FAILED:
+        response["error"] = task.error
+    
+    return response
 
 
 @router.post("/questions/ingest", response_model=QuestionCreateResponse)
