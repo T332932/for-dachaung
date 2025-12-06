@@ -141,8 +141,8 @@ export default function BatchUploader() {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">批量上传</h1>
-          <p className="text-muted-foreground">上传多个题目图片，AI 自动识别并入库</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">题目上传</h1>
+          <p className="text-muted-foreground">上传题目图片，AI 自动识别并入库</p>
         </div>
 
         <div className="p-6 rounded-xl border border-border bg-card">
