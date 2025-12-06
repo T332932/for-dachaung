@@ -257,8 +257,8 @@ export const questionApi = {
   // 获取题目列表
   list: async (params?: { page?: number; limit?: number; search?: string; includePublic?: boolean }) => {
     const response = await api.get('/api/teacher/questions', { params });
-    return response.data;
-  }, as { total: number; items: any[] };
+    return response.data as { total: number; items: any[] };
+  },
 
   // 获取默认提示词
   getDefaultPrompt: async (): Promise<{ prompt: string }> => {
@@ -266,14 +266,20 @@ export const questionApi = {
     return response.data;
   },
 
-  // 语义搜索（后端未实现，暂不支持）
-  search: async (_query: string, _topK: number = 5) => {
-    throw new Error('Semantic search not implemented on backend');
-  },
-
-  // 删除题目（后端未实现，暂不支持）
-  delete: async (_id: string) => {
-    throw new Error('Delete question not implemented on backend');
+  // 语义搜索题目
+  search: async (query: string, topK: number = 5): Promise<Array<{
+    id: string;
+    questionText: string;
+    answer: string;
+    similarity: number;
+    difficulty: string;
+    questionType: string;
+    knowledgePoints: string[];
+  }>> => {
+    const response = await api.get('/api/student/search', {
+      params: { q: query, top_k: topK },
+    });
+    return response.data;
   },
 
   // 获取题目详情
