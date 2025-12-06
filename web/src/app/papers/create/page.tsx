@@ -65,7 +65,7 @@ export default function CreatePaperPage() {
         setSearching(true);
         try {
             const result = await questionApi.list({ limit: 20 });
-            setSearchResults(result.questions || []);
+            setSearchResults(result.items || []);
         } catch (error) {
             console.error('Failed to load questions:', error);
         } finally {
@@ -233,8 +233,8 @@ export default function CreatePaperPage() {
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex gap-2 items-center">
                                                 <span className={`px-2 py-0.5 text-xs rounded-md font-medium ${q.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                                        q.difficulty === 'hard' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
-                                                            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                    q.difficulty === 'hard' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                                                        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                                                     }`}>
                                                     {difficultyLabel(q.difficulty)}
                                                 </span>
@@ -332,8 +332,8 @@ export default function CreatePaperPage() {
                                                         {q.order}
                                                     </span>
                                                     <span className={`px-2 py-0.5 text-xs rounded-md font-medium ${q.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                                            q.difficulty === 'hard' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
-                                                                'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                        q.difficulty === 'hard' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                                                            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                                                         }`}>
                                                         {difficultyLabel(q.difficulty)}
                                                     </span>
