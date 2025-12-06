@@ -811,6 +811,7 @@ class ExportService:
     def _escape_latex(self, text: str) -> str:
         """
         转义特殊字符，但保留数学环境 $...$ 和 $$...$$ 内的内容不转义。
+        自动检测并修复未闭合的 $ 符号。
         """
         if not text:
             return ""
@@ -818,6 +819,13 @@ class ExportService:
         
         # 先简单清洗 Markdown
         text = self._clean_markdown(text)
+        
+        # 自动修复未闭合的 $ 符号
+        # 计算 $ 数量（排除转义的 \$）
+        dollar_count = len(re.findall(r'(?<!\\)\$', text))
+        if dollar_count % 2 != 0:
+            # 奇数个 $，说明有未闭合的，在末尾补一个
+            text = text + '$'
         
         # 使用正则分割，保留数学环境
         # 匹配 $$...$$ 或 $...$（非贪婪）
