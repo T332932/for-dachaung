@@ -41,6 +41,10 @@ class ExportService:
         基于模板分块生成 LaTeX（简化版，使用 enumerate + 分块标题）
         """
         header = r"""\documentclass[12pt]{ctexart}
+\usepackage[UTF8,fontset=none]{ctex} %% 避免缺少 fandol 字体
+\setCJKmainfont{Noto Sans CJK SC}
+\setCJKsansfont{Noto Sans CJK SC}
+\setCJKmonofont{Noto Sans Mono CJK SC}
 \usepackage{amsmath,amssymb}
 \usepackage{geometry,graphicx,enumitem}
 \geometry{paperheight=26cm,paperwidth=18.4cm,left=2cm,right=2cm,top=1.5cm,bottom=2cm}
@@ -338,7 +342,7 @@ class ExportService:
         include_explanation: bool = True,
     ) -> Tuple[str, List[Tuple[str, bytes]]]:
         header = r"""\documentclass[12pt,a4paper]{article}
-\usepackage[UTF8,fontset=none]{ctex} % 避免缺少 fandol 字体
+\usepackage[UTF8,fontset=none]{ctex} %% 避免缺少 fandol 字体
 \setCJKmainfont{Noto Sans CJK SC}
 \setCJKsansfont{Noto Sans CJK SC}
 \setCJKmonofont{Noto Sans Mono CJK SC}
