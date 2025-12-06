@@ -477,11 +477,17 @@ class ExportService:
                     if q.has_geometry and q.geometry_tikz:
                         item.append("\n" + q.geometry_tikz + "\n")
                     elif q.has_geometry and q.geometry_svg:
-                        svg_result = self._svg_to_png_attachment(q.geometry_svg)
-                        if svg_result:
-                            fname, data = svg_result
-                            attachments.append((fname, data))
-                            item.append(f'\n\\includegraphics[width=0.6\\textwidth]{{{fname}}}\n')
+                        # 优先尝试转 TikZ
+                        tikz_block = self._svg_to_tikz_block(q.geometry_svg)
+                        if tikz_block:
+                            item.append("\n" + tikz_block + "\n")
+                        else:
+                            # TikZ 转换失败，尝试 PNG
+                            svg_result = self._svg_to_png_attachment(q.geometry_svg)
+                            if svg_result:
+                                fname, data = svg_result
+                                attachments.append((fname, data))
+                                item.append(f'\n\\includegraphics[width=0.6\\textwidth]{{{fname}}}\n')
                     if include_answer and q.answer:
                         item.append(f"\n\\textbf{{答案：}} {self._escape_latex(q.answer)}")
                     if include_explanation and q.explanation:
