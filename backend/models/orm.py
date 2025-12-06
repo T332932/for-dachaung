@@ -40,8 +40,10 @@ class Question(Base):
     question_type = Column(String(16), default="solve")
     source = Column(String(256), nullable=True)
     year = Column(Integer, nullable=True)
+    is_high_school = Column(Boolean, default=True)
     ai_generated = Column(Boolean, default=True)
     is_public = Column(Boolean, default=False)
+    status = Column(String(32), default="pending")  # pending/approved/rejected
     created_by = Column(String(36), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -88,3 +90,26 @@ class PaperQuestion(Base):
     custom_label = Column(String(64), nullable=True)
 
     paper = relationship("Paper", back_populates="questions")
+
+
+class PublishReview(Base):
+    """
+    发布到公开库的审核请求
+    status: pending/approved/rejected
+    review_type: duplicate(重题)/similar(相似)/suspicious(可疑坏题)
+    """
+    __tablename__ = "publish_reviews"
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    question_id = Column(String(36), ForeignKey("questions.id"), nullable=False)
+    requested_by = Column(String(36), ForeignKey("users.id"), nullable=False)
+    status = Column(String(16), default="pending")  # pending/approved/rejected
+    review_type = Column(String(16), nullable=False)  # similar/suspicious
+    similarity_score = Column(Integer, nullable=True)  # 0-100 百分比
+    similar_question_id = Column(String(36), nullable=True)  # 最相似题目ID
+    admin_notes = Column(Text, nullable=True)
+    reviewed_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    reviewed_at = Column(DateTime, nullable=True)
+
+    question = relationship("Question")

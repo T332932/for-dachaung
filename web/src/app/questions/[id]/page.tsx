@@ -78,6 +78,21 @@ export default function QuestionDetailPage() {
             setEditing(false);
             alert('保存成功');
         } catch (error: any) {
+            // 处理发布审核相关的错误
+            if (error.response?.status === 400 && error.response?.data?.detail?.error === 'publish_rejected') {
+                const detail = error.response.data.detail;
+                alert(`❌ 发布被拒绝\n\n原因：${detail.reason}\n相似度：${(detail.max_similarity * 100).toFixed(1)}%`);
+                // 保持编辑状态，允许用户修改
+                return;
+            }
+            if (error.response?.status === 202 && error.response?.data?.detail?.error === 'publish_pending_review') {
+                const detail = error.response.data.detail;
+                alert(`⚠️ 发布请求已提交审核\n\n原因：${detail.reason}\n\n管理员审核通过后将自动公开。`);
+                setQuestion({ ...question, ...editForm } as Question);
+                setEditing(false);
+                return;
+            }
+
             alert(error?.userMessage || '保存失败');
         } finally {
             setSaving(false);

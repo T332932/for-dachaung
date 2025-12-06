@@ -153,6 +153,137 @@ class RAGService:
             for sim, q in scored[:top_k]
         ]
     
+    async def check_publish_eligibility(self, db: Session, question_id: str) -> dict:
+        """
+        检测题目是否可以发布到公开库
+        返回: {
+            'eligible': bool,  # 是否直接通过
+            'status': 'approved'/'pending_review'/'rejected',
+            'reason': str,
+            'max_similarity': float,
+            'similar_question_id': str or None,
+            'review_type': str or None  # 'duplicate'/'similar'/'suspicious'
+        }
+        阈值:
+        - > 0.95: 重题，拒绝
+        - 0.8-0.95: 相似题，需管理员审核
+        - 0.4-0.8: 正常，自动通过
+        - < 0.4: 可疑题目，需管理员审核
+        """
+        q = db.query(orm.Question).filter(orm.Question.id == question_id).first()
+        if not q:
+            return {'eligible': False, 'status': 'rejected', 'reason': '题目不存在'}
+    
+        # 基础校验
+        if q.is_high_school is False:
+            return {
+                'eligible': False,
+                'status': 'pending_review',
+                'reason': '模型判定该题目不是高中数学题',
+                'max_similarity': 0,
+                'similar_question_id': None,
+                'review_type': 'suspicious'
+            }
+        if not q.question_text or len(q.question_text.strip()) < 10:
+            return {
+                'eligible': False, 'status': 'rejected',
+                'reason': '题干过短（少于10字符）',
+                'max_similarity': 0, 'similar_question_id': None,
+                'review_type': None
+            }
+        if not q.answer or len(q.answer.strip()) < 1:
+            return {
+                'eligible': False, 'status': 'rejected',
+                'reason': '答案为空',
+                'max_similarity': 0, 'similar_question_id': None,
+                'review_type': None
+            }
+        
+        # 非数学关键词检测
+        bad_keywords = ['阅读理解', '完形填空', '古诗词', '作文', '听力', '翻译下列句子']
+        for kw in bad_keywords:
+            if kw in q.question_text:
+                return {
+                    'eligible': False, 'status': 'pending_review',
+                    'reason': f'检测到非数学关键词: {kw}',
+                    'max_similarity': 0, 'similar_question_id': None,
+                    'review_type': 'suspicious'
+                }
+        
+        # 没有 embedding 客户端时，自动通过
+        if not self.client:
+            return {
+                'eligible': True, 'status': 'approved',
+                'reason': 'Embedding服务未配置，自动通过',
+                'max_similarity': 0, 'similar_question_id': None,
+                'review_type': None
+            }
+        
+        # 获取当前题目向量
+        text = self._build_text(q)
+        query_vec = await self._get_embedding(text)
+        if not query_vec:
+            return {
+                'eligible': True, 'status': 'approved',
+                'reason': 'Embedding生成失败，自动通过',
+                'max_similarity': 0, 'similar_question_id': None,
+                'review_type': None
+            }
+        
+        # 只与已公开题目比较
+        public_questions = db.query(orm.Question).filter(
+            orm.Question.is_public == True,
+            orm.Question.id != question_id
+        ).all()
+        embeddings = {emb.question_id: emb.embedding for emb in db.query(orm.QuestionEmbedding).all()}
+        
+        max_sim = 0.0
+        most_similar_id = None
+        
+        for pq in public_questions:
+            vec = embeddings.get(pq.id)
+            if not vec:
+                continue
+            sim = self._cosine_similarity(query_vec, vec)
+            if sim and sim > max_sim:
+                max_sim = sim
+                most_similar_id = pq.id
+        
+        # 根据阈值判定
+        if max_sim > 0.95:
+            return {
+                'eligible': False, 'status': 'rejected',
+                'reason': f'检测到重复题目（相似度{max_sim:.0%}）',
+                'max_similarity': max_sim,
+                'similar_question_id': most_similar_id,
+                'review_type': 'duplicate'
+            }
+        elif max_sim >= 0.8:
+            return {
+                'eligible': False, 'status': 'pending_review',
+                'reason': f'存在高度相似题目（相似度{max_sim:.0%}），需管理员审核',
+                'max_similarity': max_sim,
+                'similar_question_id': most_similar_id,
+                'review_type': 'similar'
+            }
+        elif max_sim >= 0.4:
+            return {
+                'eligible': True, 'status': 'approved',
+                'reason': '通过相似度检测',
+                'max_similarity': max_sim,
+                'similar_question_id': most_similar_id,
+                'review_type': None
+            }
+        else:
+            # 相似度过低，可能是非数学题目
+            return {
+                'eligible': False, 'status': 'pending_review',
+                'reason': f'相似度过低（{max_sim:.0%}），可能不是数学题目',
+                'max_similarity': max_sim,
+                'similar_question_id': most_similar_id,
+                'review_type': 'suspicious'
+            }
+    
     async def index_question(self, db: Session, question_id: str) -> bool:
         """为单个题目生成 embedding 并存储"""
         if not self.client:

@@ -24,28 +24,38 @@ def init_db():
     from models import review  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
-    _ensure_is_public_column()
+    _ensure_extra_columns()
 
 
-def _ensure_is_public_column():
+def _ensure_extra_columns():
     """
-    简单迁移：如 questions 表缺少 is_public 列，则自动添加。
+    简单迁移：如 questions 表缺少新增列，则自动添加。
     仅做轻量防护，真正生产环境应使用 Alembic。
     """
+    def _ensure_column_sqlite(conn, col_name, col_type):
+        res = conn.execute(text("PRAGMA table_info(questions);"))
+        cols = [row[1] for row in res.fetchall()]
+        if col_name not in cols:
+            conn.execute(text(f"ALTER TABLE questions ADD COLUMN {col_name} {col_type};"))
+
+    def _ensure_column_pg(conn, col_name, col_type, default_sql=""):
+        res = conn.execute(
+            text("SELECT column_name FROM information_schema.columns WHERE table_name='questions';")
+        )
+        cols = [row[0] for row in res.fetchall()]
+        if col_name not in cols:
+            conn.execute(text(f"ALTER TABLE questions ADD COLUMN {col_name} {col_type} {default_sql};"))
+
     try:
         with engine.begin() as conn:
             if _is_sqlite:
-                res = conn.execute(text("PRAGMA table_info(questions);"))
-                cols = [row[1] for row in res.fetchall()]
-                if "is_public" not in cols:
-                    conn.execute(text("ALTER TABLE questions ADD COLUMN is_public BOOLEAN DEFAULT 0;"))
+                _ensure_column_sqlite(conn, "is_public", "BOOLEAN DEFAULT 0")
+                _ensure_column_sqlite(conn, "status", "VARCHAR(32) DEFAULT 'pending'")
+                _ensure_column_sqlite(conn, "is_high_school", "BOOLEAN DEFAULT 1")
             elif DATABASE_URL.startswith("postgres"):
-                res = conn.execute(
-                    text("SELECT column_name FROM information_schema.columns WHERE table_name='questions';")
-                )
-                cols = [row[0] for row in res.fetchall()]
-                if "is_public" not in cols:
-                    conn.execute(text("ALTER TABLE questions ADD COLUMN is_public BOOLEAN DEFAULT FALSE;"))
+                _ensure_column_pg(conn, "is_public", "BOOLEAN", "DEFAULT FALSE")
+                _ensure_column_pg(conn, "status", "VARCHAR(32)", "DEFAULT 'pending'")
+                _ensure_column_pg(conn, "is_high_school", "BOOLEAN", "DEFAULT TRUE")
             else:
                 # 其他数据库不做自动迁移
                 pass

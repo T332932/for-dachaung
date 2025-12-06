@@ -13,6 +13,7 @@ class QuestionAnalysisResponse(BaseModel):
     difficulty: Optional[Literal["easy", "medium", "hard"]] = None
     questionType: Optional[Literal["choice", "multi", "fillblank", "solve", "proof"]] = None
     confidence: Optional[float] = None
+    isHighSchool: bool = True
 
 
 class QuestionCreateRequest(BaseModel):
@@ -30,6 +31,8 @@ class QuestionCreateRequest(BaseModel):
     year: Optional[int] = None
     aiGenerated: bool = True
     isPublic: bool = False
+    status: Optional[str] = "pending"
+    isHighSchool: bool = True
 
 
 class QuestionCreateResponse(BaseModel):
@@ -54,6 +57,8 @@ class QuestionView(BaseModel):
     year: Optional[int] = None
     aiGenerated: bool = True
     isPublic: bool = False
+    status: Optional[str] = "pending"
+    isHighSchool: bool = True
 
     class Config:
         from_attributes = True

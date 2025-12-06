@@ -24,6 +24,8 @@ export interface QuestionPayload {
   year?: number | null;
   aiGenerated?: boolean;
   isPublic?: boolean;  // 是否公开到公共题库
+  status?: string;
+  isHighSchool?: boolean;
 }
 
 export interface PaperQuestionInput {

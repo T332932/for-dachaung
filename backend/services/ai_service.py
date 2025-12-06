@@ -143,7 +143,8 @@ class AIService:
   "knowledgePoints": ["知识点1", "知识点2"],
   "difficulty": "easy/medium/hard",
   "questionType": "choice/multi/fillblank/solve/proof",
-  "confidence": 0.0-1.0
+  "confidence": 0.0-1.0,
+  "isHighSchool": true/false  // 是否为高中数学范围的题目（若判断不出，返回 false）
 }
 仅输出 JSON，不要额外说明。"""
         
@@ -153,6 +154,7 @@ class AIService:
 - 不要在题干前自动加题号（如 1.、(1) 等），题号由系统生成。
 - 答案与解题步骤只放在 answer 字段。
 - questionType 只能是 choice/multi/fillblank/solve/proof 之一，禁止组合值。
+- isHighSchool 为 true 仅限高中数学题；如果不是高中数学或无法判断，请返回 false。
 SVG 生成要求：
 - 使用 <line>, <circle>, <ellipse>, <path>, <text> 标签
 - 虚线用 stroke-dasharray="5,5"
@@ -359,6 +361,7 @@ SVG 生成要求：
             "difficulty": None,
             "questionType": None,
             "confidence": None,
+            "isHighSchool": True,
             "_parseError": "所有解析策略均失败",
         }
     
@@ -381,6 +384,8 @@ SVG 生成要求：
                     break
             # 清理 questionText 中的图片/占位
             data["questionText"] = self._strip_images(data.get("questionText") or "").strip()
+            # 高中数学标记默认 True
+            data["isHighSchool"] = bool(data.get("isHighSchool", True))
         return data
 
     def _strip_images(self, text: str) -> str:
@@ -409,6 +414,7 @@ SVG 生成要求：
             "difficulty": "medium",
             "questionType": "solve",
             "confidence": 0.0,
+            "isHighSchool": True,
         }
 
 

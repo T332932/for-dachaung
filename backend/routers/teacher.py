@@ -45,6 +45,8 @@ DEFAULT_PROMPT = """### 任务核心要求
    - 虚线用 stroke-dasharray="5,5"
    - 文本标注用 <text> 标签，内容为数学符号
    - viewBox="0 0 400 400"，坐标准确
+4. **学科范围**：
+   - 若题目是高中数学，请返回 isHighSchool=true；若非高中数学或无法判断，请返回 false。
 
 ### 格式强制约束
 - answer中所有公式必须作为完整文本单行呈现，禁止拆分/换行；
@@ -166,6 +168,7 @@ async def ingest_and_create_question(
         source=analysis.get("source") or "ai_upload",
         year=analysis.get("year"),
         aiGenerated=True,
+        isHighSchool=bool(analysis.get("isHighSchool", True)),
     )
     try:
         q = orm.Question(
@@ -182,6 +185,7 @@ async def ingest_and_create_question(
             source=payload.source,
             year=payload.year,
             ai_generated=payload.aiGenerated,
+            is_high_school=payload.isHighSchool,
             created_by=current_user.id if current_user else None,
         )
         db.add(q)
@@ -215,13 +219,15 @@ async def create_question(
             geometry_tikz=payload.geometryTikz,
             knowledge_points=payload.knowledgePoints,
             difficulty=payload.difficulty,
-            question_type=payload.questionType,
-            source=payload.source,
-            year=payload.year,
-            ai_generated=payload.aiGenerated,
-            is_public=payload.isPublic,
-            created_by=current_user.id if current_user else None,
-        )
+        question_type=payload.questionType,
+        source=payload.source,
+        year=payload.year,
+        ai_generated=payload.aiGenerated,
+        is_public=False,  # 默认不公开，需审核
+        is_high_school=payload.isHighSchool,
+        status=payload.status or "pending",
+        created_by=current_user.id if current_user else None,
+    )
         db.add(q)
         db.commit()
         db.refresh(q)
@@ -282,6 +288,8 @@ async def list_questions(
             year=item.year,
             aiGenerated=item.ai_generated,
             isPublic=item.is_public,
+            status=item.status,
+            isHighSchool=item.is_high_school,
         )
         for item in items
     ]
@@ -313,6 +321,8 @@ async def get_question_detail(
         year=q.year,
         aiGenerated=q.ai_generated,
         isPublic=q.is_public,
+        status=q.status,
+        isHighSchool=q.is_high_school,
     )
 
 
@@ -325,6 +335,7 @@ async def update_question(
 ):
     """
     更新题目信息。只能更新自己创建的题目。
+    如果尝试发布到公开库，会进行相似度检测。
     """
     q = db.query(orm.Question).filter(orm.Question.id == question_id).first()
     if not q:
@@ -333,6 +344,56 @@ async def update_question(
     # 权限检查：只能更新自己的题目
     if q.created_by != current_user.id:
         raise HTTPException(status_code=403, detail="无权限修改此题目")
+    
+    # 检测是否尝试发布到公开库（从 False 变为 True）
+    is_publishing = not q.is_public and payload.isPublic
+    publish_result = None
+    
+    if is_publishing:
+        if not payload.isHighSchool:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "publish_rejected",
+                    "reason": "该题目未被判定为高中数学，无法公开",
+                },
+            )
+        # 进行发布资格检测
+        publish_result = await rag_service.check_publish_eligibility(db, question_id)
+        
+        if publish_result['status'] == 'rejected':
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "publish_rejected",
+                    "reason": publish_result['reason'],
+                    "max_similarity": publish_result.get('max_similarity', 0),
+                    "similar_question_id": publish_result.get('similar_question_id'),
+                }
+            )
+        elif publish_result['status'] == 'pending_review':
+            # 创建待审核记录
+            review = orm.PublishReview(
+                question_id=question_id,
+                requested_by=current_user.id,
+                status='pending',
+                review_type=publish_result.get('review_type') or 'similar',
+                similarity_score=int(publish_result.get('max_similarity', 0) * 100),
+                similar_question_id=publish_result.get('similar_question_id'),
+            )
+            db.add(review)
+            db.commit()
+            
+            raise HTTPException(
+                status_code=202,
+                detail={
+                    "error": "publish_pending_review",
+                    "reason": publish_result['reason'],
+                    "message": "发布请求已提交，等待管理员审核",
+                    "review_id": review.id,
+                }
+            )
+        # 如果 approved，继续正常更新
     
     # 更新字段
     q.question_text = payload.questionText
@@ -348,6 +409,8 @@ async def update_question(
     q.source = payload.source
     q.year = payload.year
     q.is_public = payload.isPublic
+    q.is_high_school = payload.isHighSchool
+    q.status = payload.status or q.status
     
     try:
         db.commit()
@@ -372,6 +435,8 @@ async def update_question(
         year=q.year,
         aiGenerated=q.ai_generated,
         isPublic=q.is_public,
+        status=q.status,
+        isHighSchool=q.is_high_school,
     )
 
 
@@ -715,3 +780,100 @@ async def delete_paper(
         raise
     
     return {"success": True, "message": "试卷已删除"}
+
+
+# ===== 管理员审核 API =====
+
+@router.get("/admin/publish-reviews")
+async def list_publish_reviews(
+    status: str = Query("pending", pattern="^(pending|approved|rejected|all)$"),
+    db: Session = Depends(get_db),
+    current_user: orm.User = Depends(require_role(["admin"])),
+):
+    """
+    管理员查看待审核的发布请求列表
+    """
+    query = db.query(orm.PublishReview)
+    if status != "all":
+        query = query.filter(orm.PublishReview.status == status)
+    reviews = query.order_by(orm.PublishReview.created_at.desc()).limit(50).all()
+    
+    result = []
+    for r in reviews:
+        q = db.query(orm.Question).filter(orm.Question.id == r.question_id).first()
+        similar_q = None
+        if r.similar_question_id:
+            similar_q = db.query(orm.Question).filter(orm.Question.id == r.similar_question_id).first()
+        
+        result.append({
+            "id": r.id,
+            "questionId": r.question_id,
+            "questionText": q.question_text[:200] if q else "",
+            "status": r.status,
+            "reviewType": r.review_type,
+            "similarityScore": r.similarity_score,
+            "similarQuestionId": r.similar_question_id,
+            "similarQuestionText": similar_q.question_text[:200] if similar_q else None,
+            "requestedBy": r.requested_by,
+            "createdAt": r.created_at.isoformat() if r.created_at else None,
+        })
+    
+    return {"items": result, "total": len(result)}
+
+
+@router.post("/admin/publish-reviews/{review_id}/approve")
+async def approve_publish_review(
+    review_id: str,
+    db: Session = Depends(get_db),
+    current_user: orm.User = Depends(require_role(["admin"])),
+):
+    """
+    管理员批准发布请求
+    """
+    from datetime import datetime, timezone
+    
+    review = db.query(orm.PublishReview).filter(orm.PublishReview.id == review_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="review not found")
+    if review.status != "pending":
+        raise HTTPException(status_code=400, detail="该请求已处理")
+    
+    # 更新审核状态
+    review.status = "approved"
+    review.reviewed_by = current_user.id
+    review.reviewed_at = datetime.now(timezone.utc)
+    
+    # 将题目设为公开
+    q = db.query(orm.Question).filter(orm.Question.id == review.question_id).first()
+    if q:
+        q.is_public = True
+    
+    db.commit()
+    return {"success": True, "message": "已批准发布"}
+
+
+@router.post("/admin/publish-reviews/{review_id}/reject")
+async def reject_publish_review(
+    review_id: str,
+    notes: str = Query(None),
+    db: Session = Depends(get_db),
+    current_user: orm.User = Depends(require_role(["admin"])),
+):
+    """
+    管理员拒绝发布请求
+    """
+    from datetime import datetime, timezone
+    
+    review = db.query(orm.PublishReview).filter(orm.PublishReview.id == review_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="review not found")
+    if review.status != "pending":
+        raise HTTPException(status_code=400, detail="该请求已处理")
+    
+    review.status = "rejected"
+    review.reviewed_by = current_user.id
+    review.reviewed_at = datetime.now(timezone.utc)
+    review.admin_notes = notes
+    
+    db.commit()
+    return {"success": True, "message": "已拒绝发布"}
