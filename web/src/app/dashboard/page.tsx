@@ -1,84 +1,266 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { QuestionUploader, QuestionAnalysisResult } from '@/components/question/QuestionUploader';
-import { QuestionEditor } from '@/components/question/QuestionEditor';
+import { useCallback, useState } from 'react';
+import { questionApi } from '@/lib/api-client';
+import { MathText } from '@/components/ui/MathText';
+import { QuestionAnalysisResult } from '@/components/question/QuestionUploader';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card } from '@/components/ui/card';
 
-export default function Home() {
-  const [step, setStep] = useState<'upload' | 'edit' | 'success'>('upload');
-  const [currentQuestion, setCurrentQuestion] = useState<QuestionAnalysisResult | null>(null);
-  const [currentFile, setCurrentFile] = useState<File | null>(null);
+type ItemStatus = 'pending' | 'processing' | 'ready' | 'error' | 'saved' | 'ingesting';
 
-  const handleAnalyzed = useCallback((data: QuestionAnalysisResult, file: File) => {
-    setCurrentQuestion(data);
-    setCurrentFile(file);
-    setStep('edit');
+interface QueueItem {
+  id: string;
+  file: File;
+  name: string;
+  status: ItemStatus;
+  result?: QuestionAnalysisResult;
+  error?: string;
+}
+
+export default function BatchUploader() {
+  const [items, setItems] = useState<QueueItem[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const addFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const newItems: QueueItem[] = Array.from(files).map((f) => ({
+      id: `${f.name}-${Date.now()}-${Math.random()}`,
+      file: f,
+      name: f.name,
+      status: 'pending',
+    }));
+    setItems((prev) => [...prev, ...newItems]);
+  };
+
+  const runPreview = useCallback(async (item: QueueItem) => {
+    setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, status: 'processing', error: undefined } : it)));
+    try {
+      const result = (await questionApi.preview(item.file)) as any;
+      const merged: QuestionAnalysisResult = {
+        ...(result?.analysis || result || {}),
+        svgPng: result?.svgPng || null,
+        latex: result?.latex,
+      };
+      if (!merged.questionText?.trim() || !merged.answer?.trim() || !merged.questionType) {
+        throw new Error('解析结果缺少题干/答案/题型');
+      }
+      setItems((prev) =>
+        prev.map((it) => (it.id === item.id ? { ...it, status: 'ready', result: merged, error: undefined } : it)),
+      );
+    } catch (err: any) {
+      setItems((prev) =>
+        prev.map((it) => (it.id === item.id ? { ...it, status: 'error', error: err?.message || '解析失败' } : it)),
+      );
+    }
   }, []);
 
-  const handleSave = useCallback((savedData: QuestionAnalysisResult) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Saved:', savedData);
+  const runAll = async () => {
+    setIsUploading(true);
+    for (const it of items) {
+      if (it.status === 'pending' || it.status === 'error') {
+        // eslint-disable-next-line no-await-in-loop
+        await runPreview(it);
+      }
     }
-    setStep('success');
-  }, []);
+    setIsUploading(false);
+  };
 
-  useEffect(() => {
-    if (step === 'success') {
-      const timer = setTimeout(() => {
-        setStep('upload');
-        setCurrentQuestion(null);
-        setCurrentFile(null);
-      }, 3000);
-      return () => clearTimeout(timer);
+  // 快速入库模式：上传 → AI分析 → 自动保存
+  const ingestItem = async (item: QueueItem) => {
+    setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, status: 'ingesting', error: undefined } : it)));
+    try {
+      await questionApi.ingest(item.file);
+      setItems((prev) =>
+        prev.map((it) => (it.id === item.id ? { ...it, status: 'saved', error: undefined } : it)),
+      );
+    } catch (err: any) {
+      setItems((prev) =>
+        prev.map((it) => (it.id === item.id ? { ...it, status: 'error', error: err?.userMessage || err?.message || '入库失败' } : it)),
+      );
     }
-  }, [step]);
+  };
+
+  // 快速入库所有
+  const ingestAll = async () => {
+    setIsUploading(true);
+    for (const it of items) {
+      if (it.status === 'pending' || it.status === 'error') {
+        await ingestItem(it);
+      }
+    }
+    setIsUploading(false);
+  };
+
+  const validateForSave = (res?: QuestionAnalysisResult) => {
+    if (!res?.questionText?.trim() || !res.answer?.trim() || !res.questionType) return false;
+    if ((res.questionType === 'choice' || res.questionType === 'multi') && (!res.options || res.options.length === 0)) {
+      return false;
+    }
+    return true;
+  };
+
+  const saveItem = async (item: QueueItem) => {
+    const res = item.result;
+    if (!validateForSave(res)) {
+      alert('题干/答案/题型或选项不完整');
+      return;
+    }
+    setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, status: 'processing' } : it)));
+    try {
+      await questionApi.create({
+        questionText: res?.questionText || '',
+        options: res?.options || null,
+        answer: res?.answer || '',
+        explanation: undefined,
+        hasGeometry: Boolean(res?.hasGeometry),
+        geometrySvg: res?.geometrySvg || null,
+        geometryTikz: null,
+        knowledgePoints: res?.knowledgePoints || [],
+        difficulty: res?.difficulty || 'medium',
+        questionType: res?.questionType || 'solve',
+        source: undefined,
+        year: undefined,
+        aiGenerated: true,
+        isPublic: false,
+      });
+      setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, status: 'saved' } : it)));
+    } catch (err: any) {
+      alert(err?.userMessage || '入库失败');
+      setItems((prev) =>
+        prev.map((it) => (it.id === item.id ? { ...it, status: 'ready', error: err?.message } : it)),
+      );
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    addFiles(e.dataTransfer.files);
+  };
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            题目上传
-          </h1>
-          <p className="text-muted-foreground">
-            上传题目图片，AI 自动识别并结构化，一键存入题库
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">批量上传</h1>
+          <p className="text-muted-foreground">上传多个题目图片，AI 自动识别并入库</p>
+        </div>
+
+        <div className="p-6 rounded-xl border border-border bg-card">
+          <div
+            className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
+          >
+            <p className="font-medium text-foreground mb-2">拖拽或点击选择多个图片文件</p>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              className="mt-2"
+              onChange={(e) => addFiles(e.target.files)}
+            />
+          </div>
+          <div className="mt-4 flex gap-2 flex-wrap">
+            <button
+              onClick={runAll}
+              disabled={isUploading || items.length === 0}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 disabled:opacity-50 font-medium"
+            >
+              {isUploading ? '处理中…' : '解析预览'}
+            </button>
+            <button
+              onClick={ingestAll}
+              disabled={isUploading || items.length === 0}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 font-medium"
+            >
+              {isUploading ? '处理中…' : '✨ 快速入库（无需预览）'}
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            💡 “快速入库”模式会自动分析并保存到题库，您可以离开页面，稍后在题库中查看
           </p>
         </div>
 
-        {step === 'upload' && (
-          <Card className="p-8">
-            <QuestionUploader onAnalyzed={handleAnalyzed} />
-          </Card>
-        )}
+        <div className="space-y-4">
+          {items.map((item) => (
+            <div key={item.id} className="bg-card p-4 rounded-xl border border-border">
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="font-medium text-foreground">{item.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    状态：{item.status === 'pending' ? '待处理' :
+                      item.status === 'processing' ? '解析中...' :
+                        item.status === 'ingesting' ? '入库中...' :
+                          item.status === 'ready' ? '已解析' :
+                            item.status === 'saved' ? '✅ 已入库' :
+                              '❌ 失败'}
+                  </div>
+                  {item.error && <div className="text-xs text-destructive">错误：{item.error}</div>}
+                </div>
+                <div className="space-x-2">
+                  <button
+                    onClick={() => runPreview(item)}
+                    className="px-3 py-1 border border-border rounded-lg text-sm hover:bg-secondary transition-colors"
+                  >
+                    重新生成
+                  </button>
+                  <button
+                    onClick={() => ingestItem(item)}
+                    disabled={item.status === 'saved' || item.status === 'ingesting'}
+                    className="px-3 py-1 bg-primary text-primary-foreground rounded-lg text-sm disabled:opacity-50"
+                  >
+                    快速入库
+                  </button>
+                  <button
+                    onClick={() => saveItem(item)}
+                    disabled={!validateForSave(item.result) || item.status !== 'ready'}
+                    className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm disabled:opacity-50"
+                  >
+                    审核后入库
+                  </button>
+                </div>
+              </div>
 
-        {step === 'edit' && currentQuestion && (
-          <QuestionEditor
-            initialData={currentQuestion}
-            file={currentFile}
-            onSave={handleSave}
-            onCancel={() => {
-              setStep('upload');
-              setCurrentQuestion(null);
-              setCurrentFile(null);
-            }}
-          />
-        )}
-
-        {step === 'success' && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center animate-in fade-in zoom-in duration-300">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-              <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+              {item.result && (
+                <div className="mt-3 space-y-2 text-sm">
+                  <div>
+                    <div className="font-semibold text-muted-foreground">题干</div>
+                    <div className="p-2 border border-border rounded-lg bg-secondary/50">
+                      <MathText>{item.result.questionText || ''}</MathText>
+                    </div>
+                  </div>
+                  {item.result.options && item.result.options.length > 0 && (
+                    <div>
+                      <div className="font-semibold text-muted-foreground">选项</div>
+                      <div className="p-2 border border-border rounded-lg bg-secondary/50 space-y-1">
+                        {item.result.options.map((opt, idx) => (
+                          <MathText key={idx}>{opt}</MathText>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-semibold text-muted-foreground">答案</div>
+                    <div className="p-2 border border-border rounded-lg bg-secondary/50">
+                      <MathText>{item.result.answer || ''}</MathText>
+                    </div>
+                  </div>
+                  {item.result.svgPng && (
+                    <div>
+                      <div className="font-semibold text-muted-foreground">几何图预览</div>
+                      <div className="p-2 border border-border rounded-lg bg-card flex justify-center">
+                        <img src={item.result.svgPng} className="max-h-64" alt="几何图" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <h3 className="text-lg font-medium text-green-900">题目入库成功！</h3>
-            <p className="mt-2 text-sm text-green-600">
-              正在跳转回上传页面...
-            </p>
-          </div>
-        )}
+          ))}
+          {items.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">尚未添加文件</div>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );

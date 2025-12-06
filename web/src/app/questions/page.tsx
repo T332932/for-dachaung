@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Search, Filter, RefreshCw, Trash2, Eye } from 'lucide-react';
+import { Search, Filter, RefreshCw, Eye } from 'lucide-react';
 import { questionApi } from '@/lib/api-client';
 import { MathText } from '@/components/ui/MathText';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -44,8 +44,6 @@ export default function QuestionsPage() {
                 page,
                 limit: 10,
                 search: searchMode === 'list' ? searchQuery : undefined,
-                difficulty: filters.difficulty || undefined,
-                question_type: filters.questionType || undefined,
                 includePublic: filters.includePublic,
             });
             setQuestions(result.items || []);
@@ -59,24 +57,8 @@ export default function QuestionsPage() {
 
     // 语义搜索
     const handleSemanticSearch = async () => {
-        if (!searchQuery.trim()) {
-            setSearchMode('list');
-            loadQuestions();
-            return;
-        }
-
-        setLoading(true);
-        setSearchMode('semantic');
-        try {
-            const results = await questionApi.search(searchQuery, 20);
-            setQuestions(results);
-            setTotalPages(1);
-        } catch (error) {
-            console.error('Semantic search failed:', error);
-            alert('语义搜索失败，请确认已配置 Embedding 服务');
-        } finally {
-            setLoading(false);
-        }
+        setSearchMode('list');
+        loadQuestions();
     };
 
     useEffect(() => {
@@ -93,16 +75,6 @@ export default function QuestionsPage() {
     const typeLabel = (t: string) => {
         const map: Record<string, string> = { choice: '选择题', fillblank: '填空题', solve: '解答题', proof: '证明题', multi: '多选题' };
         return map[t] || t;
-    };
-
-    const handleDelete = async (id: string) => {
-        if (!confirm('确定要删除这道题目吗？此操作不可撤销。')) return;
-        try {
-            await questionApi.delete(id);
-            setQuestions(prev => prev.filter(q => q.id !== id));
-        } catch (error: any) {
-            alert(error?.userMessage || '删除失败');
-        }
     };
 
     return (
@@ -173,6 +145,7 @@ export default function QuestionsPage() {
                             >
                                 <option value="">全部题型</option>
                                 <option value="choice">选择题</option>
+                                <option value="multi">多选题</option>
                                 <option value="fillblank">填空题</option>
                                 <option value="solve">解答题</option>
                                 <option value="proof">证明题</option>
@@ -207,12 +180,9 @@ export default function QuestionsPage() {
                             <span>包含公共题库</span>
                         </label>
 
-                        {searchMode === 'semantic' && (
-                            <div className="text-sm text-primary flex items-center gap-1">
-                                <Search className="w-3 h-3" />
-                                语义搜索模式：显示与"{searchQuery}"最相关的题目
-                            </div>
-                        )}
+                        <div className="text-sm text-muted-foreground">
+                            提示：后端暂不支持语义搜索/删除，仅关键词检索。
+                        </div>
                     </div>
                 </Card>
 
@@ -260,32 +230,16 @@ export default function QuestionsPage() {
                                         <span className="px-2.5 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
                                             {typeLabel(q.questionType)}
                                         </span>
-                                        {q.similarity !== undefined && (
-                                            <span className="px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
-                                                相似度: {Math.round(q.similarity * 100)}%
-                                            </span>
-                                        )}
                                     </div>
-                                    <div className="flex gap-1">
-                                        <Link href={`/questions/${q.id}`}>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </Button>
-                                        </Link>
+                                    <Link href={`/questions/${q.id}`}>
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={(e) => { e.stopPropagation(); handleDelete(q.id); }}
-                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
-                                            <Trash2 className="w-4 h-4" />
+                                            <Eye className="w-4 h-4" />
                                         </Button>
-                                    </div>
+                                    </Link>
                                 </div>
 
                                 <div className="prose prose-sm max-w-none mb-4 text-foreground/90">
@@ -332,4 +286,3 @@ export default function QuestionsPage() {
         </DashboardLayout>
     );
 }
-
