@@ -403,7 +403,7 @@ class ExportService:
                 for fname, data in attachments or []:
                     (tmp_path / fname).write_bytes(data)
                 cmd = [
-                    "pdflatex",
+                    "xelatex",
                     "-interaction=nonstopmode",
                     "-halt-on-error",
                     tex_file.name,
