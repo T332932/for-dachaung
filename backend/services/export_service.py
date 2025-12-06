@@ -405,43 +405,87 @@ class ExportService:
 
         body_parts = []
         attachments: List[Tuple[str, bytes]] = []
+        
+        # 按题型分组
+        SECTION_ORDER = ['choice_single', 'choice_multi', 'fill', 'solve']
+        SECTION_NAMES = {
+            'choice_single': '一、选择题',
+            'choice_multi': '二、多项选择题',
+            'fill': '二、填空题',
+            'solve': '三、解答题',
+        }
+        
+        # 收集题目按类型分组
+        questions_by_type: dict = {}
         for pq in sorted(pq_list, key=lambda x: x.order):
             q = question_map.get(pq.question_id)
             if not q:
                 continue
-            item = []
-            item.append(f"\\item ({pq.score}分) {self._escape_latex(q.question_text)}")
-            # 选项渲染
-            if q.options and len(q.options) == 4 and (q.question_type or "").startswith("choice"):
-                a, b, c, d = q.options
-                item.append("\n" + r"\choicefour{%s}{%s}{%s}{%s}" % (
-                    self._escape_latex(a),
-                    self._escape_latex(b),
-                    self._escape_latex(c),
-                    self._escape_latex(d),
-                ) + "\n")
-            elif q.options:
-                # 其他数量选项，按列表
-                item.append(r"\begin{enumerate}[label=\Alph*. ,leftmargin=1.2em,itemsep=0.2em]")
-                for opt in q.options:
-                    item.append(r"\item %s" % self._escape_latex(opt))
-                item.append(r"\end{enumerate}")
-            # 图形
-            if q.has_geometry and q.geometry_tikz:
-                item.append("\n" + q.geometry_tikz + "\n")
-            elif q.has_geometry and q.geometry_svg:
-                svg_result = self._svg_to_png_attachment(q.geometry_svg)
-                if svg_result:
-                    fname, data = svg_result
-                    attachments.append((fname, data))
-                    item.append(f'\n\\includegraphics[width=0.6\\textwidth]{{{fname}}}\n')
-                else:
-                    item.append("\n% TODO: embed SVG or convert to TikZ\n")
-            if include_answer and q.answer:
-                item.append(f"\n\\textbf{{答案：}} {self._escape_latex(q.answer)}")
-            if include_explanation and q.explanation:
-                item.append(f"\n\\textbf{{解析：}} {self._escape_latex(q.explanation)}")
-            body_parts.append("\n".join(item))
+            qtype = q.question_type or 'solve'
+            if qtype.startswith('choice'):
+                qtype = 'choice_single'
+            if qtype not in questions_by_type:
+                questions_by_type[qtype] = []
+            questions_by_type[qtype].append((pq, q))
+        
+        # 判断是否只有一种题型
+        has_multiple_types = len(questions_by_type) > 1
+        
+        # 按顺序输出各类型题目
+        question_number = 0
+        for section_type in SECTION_ORDER:
+            if section_type not in questions_by_type:
+                continue
+            
+            section_items = []
+            
+            # 添加章节标题（如果有多种题型）
+            if has_multiple_types:
+                section_name = SECTION_NAMES.get(section_type, section_type)
+                section_items.append(r"\end{enumerate}")
+                section_items.append(r"\vspace{1em}")
+                section_items.append(r"\noindent\textbf{%s}" % section_name)
+                section_items.append(r"\vspace{0.5em}")
+                section_items.append(r"\begin{enumerate}[leftmargin=0em,label=\arabic*.,itemsep=1em,start=%d]" % (question_number + 1))
+            
+            for pq, q in questions_by_type[section_type]:
+                question_number += 1
+                try:
+                    item = []
+                    item.append(f"\\item ({pq.score}分) {self._escape_latex(q.question_text)}")
+                    # 选项渲染
+                    if q.options and len(q.options) == 4 and (q.question_type or "").startswith("choice"):
+                        a, b, c, d = q.options
+                        item.append("\n" + r"\choicefour{%s}{%s}{%s}{%s}" % (
+                            self._escape_latex(a),
+                            self._escape_latex(b),
+                            self._escape_latex(c),
+                            self._escape_latex(d),
+                        ) + "\n")
+                    elif q.options:
+                        item.append(r"\begin{enumerate}[label=\Alph*. ,leftmargin=1.2em,itemsep=0.2em]")
+                        for opt in q.options:
+                            item.append(r"\item %s" % self._escape_latex(opt))
+                        item.append(r"\end{enumerate}")
+                    # 图形
+                    if q.has_geometry and q.geometry_tikz:
+                        item.append("\n" + q.geometry_tikz + "\n")
+                    elif q.has_geometry and q.geometry_svg:
+                        svg_result = self._svg_to_png_attachment(q.geometry_svg)
+                        if svg_result:
+                            fname, data = svg_result
+                            attachments.append((fname, data))
+                            item.append(f'\n\\includegraphics[width=0.6\\textwidth]{{{fname}}}\n')
+                    if include_answer and q.answer:
+                        item.append(f"\n\\textbf{{答案：}} {self._escape_latex(q.answer)}")
+                    if include_explanation and q.explanation:
+                        item.append(f"\n\\textbf{{解析：}} {self._escape_latex(q.explanation)}")
+                    section_items.append("\n".join(item))
+                except Exception as e:
+                    # 单题出错不影响整体
+                    section_items.append(f"\\item % 题目生成出错: {str(e)[:50]}")
+            
+            body_parts.extend(section_items)
 
         footer = r"""\end{enumerate}
 \end{document}
