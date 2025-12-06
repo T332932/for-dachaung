@@ -104,17 +104,18 @@ class ExportService:
                     item_lines.append(r"\end{enumerate}")
                 # 图形
                 if q.has_geometry and q.geometry_tikz:
-                    item_lines.append("\n" + q.geometry_tikz + "\n")
+                    item_lines.append(self._wrap_diagram_block(q.geometry_tikz))
                 elif q.has_geometry and q.geometry_svg:
                     tikz_block = self._svg_to_tikz_block(q.geometry_svg)
                     if tikz_block:
-                        item_lines.append("\n" + tikz_block + "\n")
+                        item_lines.append(self._wrap_diagram_block(tikz_block))
                     else:
                         svg_result = self._svg_to_png_attachment(q.geometry_svg)
                         if svg_result:
                             fname, data = svg_result
                             attachments.append((fname, data))
-                            item_lines.append(f'\n\\includegraphics[width=0.6\\textwidth]{{{fname}}}\n')
+                            img = f'\\includegraphics[width=0.48\\textwidth]{{{fname}}}'
+                            item_lines.append(self._wrap_diagram_block(img))
                         else:
                             item_lines.append("\n% SVG 转换失败，未插入图形\n")
                 # 答案/解析
