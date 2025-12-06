@@ -843,9 +843,14 @@ class ExportService:
         """
         import re
         
-        # 使用占位符保护连续下划线，避免被逐字符转义
+        # 使用占位符保护填空横线（多种格式）
         BLANK_PLACEHOLDER = "\x00BLANK\x00"
-        text = re.sub(r'_{2,}', BLANK_PLACEHOLDER, text)
+        
+        # 处理各种填空横线格式：
+        # 1. 连续下划线 ____ 
+        # 2. 已转义的 \_\_\_\_ 
+        # 3. 混合格式
+        text = re.sub(r'(\\?_){2,}', BLANK_PLACEHOLDER, text)
         
         # 转义特殊字符
         replacements = {
@@ -863,6 +868,6 @@ class ExportService:
             out.append(replacements.get(ch, ch))
         result = "".join(out)
         
-        # 将占位符替换为 LaTeX 填空横线
-        result = result.replace(BLANK_PLACEHOLDER, r"\underline{\hspace{2em}}")
+        # 将占位符替换为 LaTeX 填空横线命令
+        result = result.replace(BLANK_PLACEHOLDER, r"\undsp ")
         return result
