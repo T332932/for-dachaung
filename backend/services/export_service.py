@@ -775,7 +775,14 @@ class ExportService:
 
         if not cmds:
             return None
-        tikz = ["\\begin{tikzpicture}[scale=1]", *cmds, "\\end{tikzpicture}"]
+        # 高考卷风格：居中、适当缩放、细线条
+        tikz = [
+            "\\begin{center}",
+            "\\begin{tikzpicture}[>=Stealth, scale=0.8, line width=0.5pt]",
+            *cmds,
+            "\\end{tikzpicture}",
+            "\\end{center}"
+        ]
         return "\n".join(tikz)
 
     def svg_to_png_base64(self, svg_content: str) -> str | None:
