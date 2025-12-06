@@ -72,6 +72,9 @@ export default function CreatePaperPage() {
     // 模板状态
     const [templateId, setTemplateId] = useState<keyof typeof TEMPLATES>('custom');
 
+    // 悬浮预览
+    const [hoverQuestion, setHoverQuestion] = useState<Question | SelectedQuestion | null>(null);
+
     // 搜索题目
     const handleSearch = async () => {
         if (!searchQuery.trim()) return;
@@ -412,7 +415,11 @@ export default function CreatePaperPage() {
                                         </thead>
                                         <tbody>
                                             {selectedQuestions.map((q, idx) => (
-                                                <tr key={q.id} className="border-b border-border/50 hover:bg-secondary/20 group">
+                                                <tr
+                                                    key={q.id}
+                                                    className={`border-b border-border/50 hover:bg-secondary/20 group cursor-pointer ${hoverQuestion?.id === q.id ? 'bg-primary/10' : ''}`}
+                                                    onMouseEnter={() => setHoverQuestion(q)}
+                                                >
                                                     <td className="py-2 px-3 text-center">
                                                         <span className="w-6 h-6 bg-primary/10 text-primary rounded flex items-center justify-center text-xs font-bold mx-auto">
                                                             {q.order}
@@ -425,8 +432,8 @@ export default function CreatePaperPage() {
                                                     </td>
                                                     <td className="py-2 px-3 text-center">
                                                         <span className={`px-1.5 py-0.5 text-xs rounded ${q.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                                                q.difficulty === 'hard' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
-                                                                    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                            q.difficulty === 'hard' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                                                                'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                                                             }`}>
                                                             {difficultyLabel(q.difficulty)}
                                                         </span>
@@ -476,6 +483,34 @@ export default function CreatePaperPage() {
                                 )}
                             </div>
                         </Card>
+
+                        {/* 悬浮预览面板 */}
+                        {hoverQuestion && (
+                            <Card className="p-4 bg-card/95 backdrop-blur border-primary/20 shadow-lg shrink-0 max-h-80 overflow-y-auto">
+                                <div className="text-xs text-muted-foreground mb-2 flex items-center justify-between">
+                                    <span>题目预览</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 w-5 p-0"
+                                        onClick={() => setHoverQuestion(null)}
+                                    >×</Button>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="text-sm">
+                                        <MathText>{hoverQuestion.questionText}</MathText>
+                                    </div>
+                                    {hoverQuestion.answer && (
+                                        <div className="border-t pt-3">
+                                            <div className="text-xs text-muted-foreground mb-1">答案/解析</div>
+                                            <div className="text-sm text-foreground/70">
+                                                <MathText>{hoverQuestion.answer.slice(0, 500) + (hoverQuestion.answer.length > 500 ? '...' : '')}</MathText>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </Card>
+                        )}
                     </div>
                 </div>
             </div>
