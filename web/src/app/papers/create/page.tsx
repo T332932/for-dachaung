@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { questionApi, paperApi } from '@/lib/api-client';
 import { MathText } from '@/components/ui/MathText';
@@ -110,6 +110,64 @@ export default function CreatePaperPage() {
 
     // 判断是否是模板模式
     const isTemplateMode = templateSlots.length > 0;
+
+    // 草稿加载状态
+    const [draftLoaded, setDraftLoaded] = useState(false);
+    const [savingDraft, setSavingDraft] = useState(false);
+
+    // 页面加载时恢复草稿
+    useEffect(() => {
+        const loadDraft = async () => {
+            try {
+                const draft = await paperApi.getDraft();
+                if (draft) {
+                    if (draft.title) setPaperTitle(draft.title);
+                    if (draft.timeLimit) setTimeLimit(draft.timeLimit);
+                    if (draft.questionsData && draft.questionsData.length > 0) {
+                        // 恢复已选题目
+                        setSelectedQuestions(draft.questionsData.map((q: any, idx: number) => ({
+                            ...q,
+                            order: q.order || idx + 1,
+                        })));
+                    }
+                    console.log('草稿已恢复');
+                }
+            } catch (err) {
+                console.log('无草稿或加载失败');
+            }
+            setDraftLoaded(true);
+        };
+        loadDraft();
+    }, []);
+
+    // 自动保存草稿（防抖 3 秒）
+    useEffect(() => {
+        if (!draftLoaded) return;
+
+        const timer = setTimeout(async () => {
+            try {
+                setSavingDraft(true);
+                await paperApi.saveDraft({
+                    title: paperTitle || undefined,
+                    templateId: templateId,
+                    timeLimit: typeof timeLimit === 'number' ? timeLimit : undefined,
+                    questionsData: selectedQuestions.map(q => ({
+                        id: q.id,
+                        score: q.score,
+                        order: q.order,
+                        questionText: q.questionText?.slice(0, 100),
+                        difficulty: q.difficulty,
+                    })),
+                });
+            } catch (err) {
+                console.error('草稿保存失败', err);
+            } finally {
+                setSavingDraft(false);
+            }
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [draftLoaded, paperTitle, templateId, timeLimit, selectedQuestions]);
 
     // 搜索题目
     const handleSearch = async () => {
@@ -261,6 +319,10 @@ export default function CreatePaperPage() {
                 })),
             });
             alert('试卷创建成功！');
+            // 创建成功后删除草稿
+            try {
+                await paperApi.deleteDraft();
+            } catch { }
             router.push('/papers');
         } catch (error: any) {
             console.error('Failed to create paper:', error);

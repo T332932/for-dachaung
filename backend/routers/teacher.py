@@ -1112,3 +1112,96 @@ async def reject_publish_review(
     
     db.commit()
     return {"success": True, "message": "已拒绝发布"}
+
+
+# ===================== 试卷草稿 API =====================
+
+from pydantic import BaseModel
+from typing import Optional, List, Any
+
+class DraftSaveRequest(BaseModel):
+    title: Optional[str] = None
+    templateId: Optional[str] = None
+    timeLimit: Optional[int] = None
+    questionsData: Optional[List[Any]] = None
+
+@router.post("/papers/drafts")
+async def save_draft(
+    request: DraftSaveRequest,
+    db: Session = Depends(get_db),
+    current_user: orm.User = Depends(get_current_user),
+):
+    """保存或更新试卷草稿（每用户只保留一份最新草稿）"""
+    
+    # 查找现有草稿
+    draft = db.query(orm.PaperDraft).filter(orm.PaperDraft.user_id == current_user.id).first()
+    
+    if draft:
+        # 更新现有草稿
+        if request.title is not None:
+            draft.title = request.title
+        if request.templateId is not None:
+            draft.template_id = request.templateId
+        if request.timeLimit is not None:
+            draft.time_limit = request.timeLimit
+        if request.questionsData is not None:
+            draft.questions_data = request.questionsData
+    else:
+        # 创建新草稿
+        draft = orm.PaperDraft(
+            user_id=current_user.id,
+            title=request.title,
+            template_id=request.templateId,
+            time_limit=request.timeLimit,
+            questions_data=request.questionsData or [],
+        )
+        db.add(draft)
+    
+    db.commit()
+    db.refresh(draft)
+    
+    return {
+        "id": draft.id,
+        "title": draft.title,
+        "templateId": draft.template_id,
+        "timeLimit": draft.time_limit,
+        "questionsData": draft.questions_data,
+        "updatedAt": draft.updated_at.isoformat() if draft.updated_at else None,
+    }
+
+
+@router.get("/papers/drafts/current")
+async def get_current_draft(
+    db: Session = Depends(get_db),
+    current_user: orm.User = Depends(get_current_user),
+):
+    """获取当前用户的草稿"""
+    draft = db.query(orm.PaperDraft).filter(orm.PaperDraft.user_id == current_user.id).first()
+    
+    if not draft:
+        return None
+    
+    return {
+        "id": draft.id,
+        "title": draft.title,
+        "templateId": draft.template_id,
+        "timeLimit": draft.time_limit,
+        "questionsData": draft.questions_data or [],
+        "updatedAt": draft.updated_at.isoformat() if draft.updated_at else None,
+    }
+
+
+@router.delete("/papers/drafts/current")
+async def delete_current_draft(
+    db: Session = Depends(get_db),
+    current_user: orm.User = Depends(get_current_user),
+):
+    """删除当前用户的草稿"""
+    draft = db.query(orm.PaperDraft).filter(orm.PaperDraft.user_id == current_user.id).first()
+    
+    if draft:
+        db.delete(draft)
+        db.commit()
+        return {"success": True, "message": "草稿已删除"}
+    
+    return {"success": True, "message": "无草稿"}

@@ -418,6 +418,31 @@ export const paperApi = {
     const response = await api.delete(`/api/teacher/papers/${id}`);
     return response.data;
   },
+
+  // ========== 草稿相关 ==========
+
+  // 保存草稿
+  saveDraft: async (data: {
+    title?: string;
+    templateId?: string;
+    timeLimit?: number;
+    questionsData?: Array<{ id: string; score: number; order: number; questionText?: string; difficulty?: string }>;
+  }) => {
+    const response = await api.post('/api/teacher/papers/drafts', data);
+    return response.data;
+  },
+
+  // 获取当前草稿
+  getDraft: async () => {
+    const response = await api.get('/api/teacher/papers/drafts/current');
+    return response.data;
+  },
+
+  // 删除草稿
+  deleteDraft: async () => {
+    const response = await api.delete('/api/teacher/papers/drafts/current');
+    return response.data;
+  },
 };
 
 // 管理员相关 API

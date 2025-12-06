@@ -113,3 +113,20 @@ class PublishReview(Base):
     reviewed_at = Column(DateTime, nullable=True)
 
     question = relationship("Question")
+
+
+class PaperDraft(Base):
+    """
+    试卷草稿，用于保存未完成的组卷进度
+    """
+    __tablename__ = "paper_drafts"
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    title = Column(String(256), nullable=True)
+    template_id = Column(String(64), nullable=True)
+    time_limit = Column(Integer, nullable=True)
+    # 存储选中的题目和分值: [{questionId, score, order}]
+    questions_data = Column(JSON, default=list)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
