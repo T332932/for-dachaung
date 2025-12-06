@@ -428,8 +428,8 @@ class ExportService:
   {\fourch{#1}{#2}{#3}{#4}}}%%
 }
 
-%% 填空横线
-\newcommand{\undsp}{\underline{\hspace{3em}}}
+%% 填空横线（兼容数学模式和文本模式）
+\newcommand{\undsp}{\underline{\makebox[3em]{}}}
 
 \begin{document}
 \SetMathEnvironmentSinglespace{1}
