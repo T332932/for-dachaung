@@ -510,8 +510,8 @@ class ExportService:
             section_content.append(r"\item[{\bf %s、}]{\bf\sf %s}" % (sec_name, title))
             section_content.append(r"\end{enumerate}")
             
-            # 题目列表
-            section_content.append(r"\begin{enumerate}[align=left,labelindent=0em,label={\bf\sf\arabic*.},labelwidth=1.5em,labelsep=0em,leftmargin=1.5em,start=%d]" % (question_number + 1))
+            # 题目列表（紧凑布局）
+            section_content.append(r"\begin{enumerate}[align=left,labelindent=0em,label={\bf\sf\arabic*.},labelwidth=1.5em,labelsep=0em,leftmargin=1.5em,itemsep=0pt,topsep=0pt,start=%d]" % (question_number + 1))
             
             for pq, q in section_questions:
                 question_number += 1
