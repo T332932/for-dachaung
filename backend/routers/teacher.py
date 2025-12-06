@@ -200,12 +200,13 @@ async def preview_question_async(
     include_answer: bool = Query(True),
     include_explanation: bool = Query(False),
     custom_prompt: str = Query(None, description="自定义提示词（可选）"),
-    background_tasks: BackgroundTasks = None,
 ):
     """
     异步版本的题目预览：立即返回 task_id，后台处理 AI 分析。
     前端通过 GET /tasks/{task_id}/status 轮询结果。
     """
+    import asyncio
+    
     # 1. 创建任务
     task_id = task_manager.create_task()
     
@@ -215,17 +216,17 @@ async def preview_question_async(
     with open(temp_file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
     
-    # 3. 启动后台任务
-    bg = background_tasks or BackgroundTasks()
-    bg.add_task(
-        _process_preview_task,
-        task_id=task_id,
-        file_path=str(temp_file_path),
-        format=format,
-        include_answer=include_answer,
-        include_explanation=include_explanation,
-        custom_prompt=custom_prompt,
-        temp_dir=temp_dir,
+    # 3. 使用 asyncio.create_task 启动后台任务（不阻塞主线程）
+    asyncio.create_task(
+        _process_preview_task(
+            task_id=task_id,
+            file_path=str(temp_file_path),
+            format=format,
+            include_answer=include_answer,
+            include_explanation=include_explanation,
+            custom_prompt=custom_prompt,
+            temp_dir=temp_dir,
+        )
     )
     
     # 4. 立即返回 task_id
