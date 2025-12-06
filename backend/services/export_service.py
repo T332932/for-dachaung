@@ -338,7 +338,10 @@ class ExportService:
         include_explanation: bool = True,
     ) -> Tuple[str, List[Tuple[str, bytes]]]:
         header = r"""\documentclass[12pt,a4paper]{article}
-\usepackage{ctex}
+\usepackage[UTF8,fontset=none]{ctex} % 避免缺少 fandol 字体
+\setCJKmainfont{Noto Sans CJK SC}
+\setCJKsansfont{Noto Sans CJK SC}
+\setCJKmonofont{Noto Sans Mono CJK SC}
 \usepackage{amsmath,amssymb}
 \usepackage{geometry}
 \usepackage{graphicx}
