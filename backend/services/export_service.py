@@ -697,10 +697,11 @@ class ExportService:
             elif tag == "text":
                 x, y = fmt(el.get("x")), fmt(el.get("y"))
                 dx = fmt(el.get("dx"))
-                dy = fmt(el.get("dy"))
+                dy = -fmt(el.get("dy"))  # dy 需要翻转
                 txt = (el.text or "").strip()
                 if txt:
-                    cmds.append(r"\node at (%.3f,%.3f) {%s};" % ((x + dx) * scale, flip_y(y + dy), self._escape_latex(txt)))
+                    # 用数学模式包裹文字（适合坐标点标签）
+                    cmds.append(r"\node at (%.3f,%.3f) {$%s$};" % ((x + dx) * scale, flip_y(y) + dy * scale, txt))
 
         if not cmds:
             return None
