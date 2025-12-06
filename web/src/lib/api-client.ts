@@ -281,6 +281,24 @@ export const questionApi = {
     });
     return response.data;
   },
+
+  // 获取题目详情
+  get: async (id: string) => {
+    const response = await api.get(`/api/teacher/questions/${id}`);
+    return response.data;
+  },
+
+  // 更新题目
+  update: async (id: string, data: QuestionPayload) => {
+    const response = await api.put(`/api/teacher/questions/${id}`, data);
+    return response.data;
+  },
+
+  // 删除题目
+  delete: async (id: string) => {
+    const response = await api.delete(`/api/teacher/questions/${id}`);
+    return response.data;
+  },
 };
 
 // 试卷相关 API
@@ -297,6 +315,32 @@ export const paperApi = {
 
   get: async (id: string) => {
     const response = await api.get(`/api/teacher/papers/${id}`);
+    return response.data;
+  },
+
+  // 导出试卷 PDF
+  exportPdf: async (id: string, opts?: { includeAnswer?: boolean; includeExplanation?: boolean }): Promise<Blob> => {
+    const response = await api.get(`/api/teacher/papers/${id}/export`, {
+      params: {
+        format: 'pdf',
+        include_answer: opts?.includeAnswer ?? true,
+        include_explanation: opts?.includeExplanation ?? true,
+      },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // 导出试卷 DOCX
+  exportDocx: async (id: string, opts?: { includeAnswer?: boolean; includeExplanation?: boolean }): Promise<Blob> => {
+    const response = await api.get(`/api/teacher/papers/${id}/export`, {
+      params: {
+        format: 'docx',
+        include_answer: opts?.includeAnswer ?? true,
+        include_explanation: opts?.includeExplanation ?? true,
+      },
+      responseType: 'blob',
+    });
     return response.data;
   },
 };

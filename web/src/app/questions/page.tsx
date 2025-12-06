@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Search, Filter, RefreshCw } from 'lucide-react';
+import { Search, Filter, RefreshCw, Trash2 } from 'lucide-react';
 import { questionApi } from '@/lib/api-client';
 import { MathText } from '@/components/ui/MathText';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -91,8 +91,18 @@ export default function QuestionsPage() {
     };
 
     const typeLabel = (t: string) => {
-        const map: Record<string, string> = { choice: '选择题', fillblank: '填空题', solve: '解答题', proof: '证明题' };
+        const map: Record<string, string> = { choice: '选择题', fillblank: '填空题', solve: '解答题', proof: '证明题', multi: '多选题' };
         return map[t] || t;
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('确定要删除这道题目吗？此操作不可撤销。')) return;
+        try {
+            await questionApi.delete(id);
+            setQuestions(prev => prev.filter(q => q.id !== id));
+        } catch (error: any) {
+            alert(error?.userMessage || '删除失败');
+        }
     };
 
     return (
@@ -257,6 +267,14 @@ export default function QuestionsPage() {
                                             </span>
                                         )}
                                     </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDelete(q.id)}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
                                 </div>
 
                                 <div className="prose prose-sm max-w-none mb-4 text-foreground/90">

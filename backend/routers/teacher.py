@@ -303,6 +303,94 @@ async def get_question_detail(
     )
 
 
+@router.put("/questions/{question_id}", response_model=QuestionView)
+async def update_question(
+    question_id: str,
+    payload: QuestionCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: orm.User = Depends(require_role(["teacher", "admin"])),
+):
+    """
+    更新题目信息。只能更新自己创建的题目。
+    """
+    q = db.query(orm.Question).filter(orm.Question.id == question_id).first()
+    if not q:
+        raise HTTPException(status_code=404, detail="question not found")
+    
+    # 权限检查：只能更新自己的题目
+    if q.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="无权限修改此题目")
+    
+    # 更新字段
+    q.question_text = payload.questionText
+    q.options = payload.options
+    q.answer = payload.answer
+    q.explanation = payload.explanation
+    q.has_geometry = payload.hasGeometry
+    q.geometry_svg = payload.geometrySvg
+    q.geometry_tikz = payload.geometryTikz
+    q.knowledge_points = payload.knowledgePoints
+    q.difficulty = payload.difficulty
+    q.question_type = payload.questionType
+    q.source = payload.source
+    q.year = payload.year
+    q.is_public = payload.isPublic
+    
+    try:
+        db.commit()
+        db.refresh(q)
+    except Exception:
+        db.rollback()
+        raise
+    
+    return QuestionView(
+        id=q.id,
+        questionText=q.question_text,
+        options=q.options,
+        answer=q.answer,
+        explanation=q.explanation,
+        hasGeometry=q.has_geometry,
+        geometrySvg=q.geometry_svg,
+        geometryTikz=q.geometry_tikz,
+        knowledgePoints=q.knowledge_points or [],
+        difficulty=q.difficulty,
+        questionType=q.question_type,
+        source=q.source,
+        year=q.year,
+        aiGenerated=q.ai_generated,
+        isPublic=q.is_public,
+    )
+
+
+@router.delete("/questions/{question_id}")
+async def delete_question(
+    question_id: str,
+    db: Session = Depends(get_db),
+    current_user: orm.User = Depends(require_role(["teacher", "admin"])),
+):
+    """
+    删除题目。只能删除自己创建的题目。
+    """
+    q = db.query(orm.Question).filter(orm.Question.id == question_id).first()
+    if not q:
+        raise HTTPException(status_code=404, detail="question not found")
+    
+    # 权限检查：只能删除自己的题目
+    if q.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="无权限删除此题目")
+    
+    try:
+        # 同时删除 embedding
+        db.query(orm.QuestionEmbedding).filter(orm.QuestionEmbedding.question_id == question_id).delete()
+        db.delete(q)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    
+    return {"success": True, "message": "题目已删除"}
+
+
 @router.get("/papers/{paper_id}/export")
 async def export_paper(
     paper_id: str,
