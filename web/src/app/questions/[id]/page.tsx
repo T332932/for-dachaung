@@ -264,6 +264,24 @@ export default function QuestionDetailPage() {
                             </div>
                         </div>
                     )}
+
+                    {/* 发布到公开库 */}
+                    {editing && (
+                        <div className="p-4 border border-border rounded-lg bg-secondary/30">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="w-5 h-5 rounded border-input"
+                                    checked={editForm.isPublic || false}
+                                    onChange={(e) => setEditForm({ ...editForm, isPublic: e.target.checked })}
+                                />
+                                <div>
+                                    <span className="font-medium text-foreground">发布到公开题库</span>
+                                    <p className="text-sm text-muted-foreground">其他教师可以在组卷搜索时看到此题</p>
+                                </div>
+                            </label>
+                        </div>
+                    )}
                 </Card>
             </div>
         </DashboardLayout>
