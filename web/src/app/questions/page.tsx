@@ -48,8 +48,8 @@ export default function QuestionsPage() {
                 question_type: filters.questionType || undefined,
                 includePublic: filters.includePublic,
             });
-            setQuestions(result.questions || []);
-            setTotalPages(result.totalPages || 1);
+            setQuestions(result.items || []);
+            setTotalPages(Math.ceil((result.total || 0) / 10) || 1);
         } catch (error) {
             console.error('Failed to load questions:', error);
         } finally {
