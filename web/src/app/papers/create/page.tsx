@@ -8,7 +8,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Search, Plus, Trash2, ArrowUp, ArrowDown, Save, FileText, Clock, Calculator, BookOpen } from 'lucide-react';
+import { Search, Plus, Trash2, ArrowUp, ArrowDown, Save, FileText, Clock, Calculator, BookOpen, LayoutTemplate } from 'lucide-react';
 
 interface Question {
     id: string;
@@ -24,6 +24,25 @@ interface SelectedQuestion extends Question {
     score: number;
     order: number;
 }
+
+// 模板定义
+const TEMPLATES = {
+    custom: { name: '自由组卷', slots: [] },
+    gaokao_new_1: {
+        name: '2025 全国卷 I（新高考）',
+        total: 150,
+        slots: [
+            ...Array.from({ length: 8 }, (_, i) => ({ order: i + 1, questionType: 'choice', defaultScore: 5 })),
+            ...Array.from({ length: 3 }, (_, i) => ({ order: 9 + i, questionType: 'multi', defaultScore: 6 })),
+            ...Array.from({ length: 3 }, (_, i) => ({ order: 12 + i, questionType: 'fillblank', defaultScore: 5 })),
+            { order: 15, questionType: 'solve', defaultScore: 13 },
+            { order: 16, questionType: 'solve', defaultScore: 15 },
+            { order: 17, questionType: 'solve', defaultScore: 15 },
+            { order: 18, questionType: 'solve', defaultScore: 17 },
+            { order: 19, questionType: 'solve', defaultScore: 17 },
+        ],
+    },
+};
 
 export default function CreatePaperPage() {
     const router = useRouter();
@@ -43,6 +62,9 @@ export default function CreatePaperPage() {
 
     // 提交状态
     const [submitting, setSubmitting] = useState(false);
+
+    // 模板状态
+    const [templateId, setTemplateId] = useState<keyof typeof TEMPLATES>('custom');
 
     // 搜索题目
     const handleSearch = async () => {
@@ -138,7 +160,7 @@ export default function CreatePaperPage() {
             await paperApi.create({
                 title: paperTitle,
                 description: paperDescription || undefined,
-                templateType: 'custom',
+                templateType: templateId,
                 totalScore,
                 timeLimit: timeLimit ? Number(timeLimit) : undefined,
                 questions: selectedQuestions.map(q => ({
@@ -168,9 +190,21 @@ export default function CreatePaperPage() {
                 <div className="flex justify-between items-center shrink-0">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight text-foreground">创建试卷</h1>
-                        <p className="text-muted-foreground">自由组卷模式，从题库中挑选题目</p>
+                        <p className="text-muted-foreground">从题库中挑选题目组成试卷</p>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 items-center">
+                        <div className="flex items-center gap-2">
+                            <LayoutTemplate className="w-4 h-4 text-muted-foreground" />
+                            <select
+                                className="h-10 px-3 rounded-lg border border-input bg-background text-sm"
+                                value={templateId}
+                                onChange={(e) => setTemplateId(e.target.value as keyof typeof TEMPLATES)}
+                            >
+                                {Object.entries(TEMPLATES).map(([id, t]) => (
+                                    <option key={id} value={id}>{t.name}</option>
+                                ))}
+                            </select>
+                        </div>
                         <Button
                             onClick={handleSubmit}
                             disabled={submitting || selectedQuestions.length === 0}
