@@ -433,6 +433,40 @@ async def create_question(
         raise
 
 
+@router.get("/questions/search")
+async def search_questions_semantic(
+    query: str = Query(..., description="搜索关键词"),
+    topK: int = Query(10, ge=1, le=50, description="返回结果数量"),
+    db: Session = Depends(get_db),
+    current_user: orm.User = Depends(get_current_user),
+):
+    """
+    语义搜索：使用 Embedding 进行向量相似性搜索。
+    需要配置 SILICONFLOW_API_KEY 环境变量。
+    """
+    try:
+        results = await rag_service.search_similar(db, query, top_k=topK)
+        # 转换为前端需要的格式
+        questions = []
+        for r in results:
+            q = db.query(orm.Question).filter(orm.Question.id == r["question_id"]).first()
+            if q:
+                questions.append({
+                    "id": q.id,
+                    "questionText": q.question_text,
+                    "options": json.loads(q.options) if q.options else None,
+                    "answer": q.answer,
+                    "questionType": q.question_type,
+                    "difficulty": q.difficulty,
+                    "knowledgePoints": json.loads(q.knowledge_points) if q.knowledge_points else [],
+                    "isPublic": q.is_public,
+                    "similarity": r.get("similarity", 0),
+                })
+        return questions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"搜索失败: {str(e)}")
+
+
 @router.get("/questions", response_model=QuestionListResponse)
 async def list_questions(
     db: Session = Depends(get_db),
