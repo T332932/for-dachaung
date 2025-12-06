@@ -98,13 +98,18 @@ class ExportService:
                 item_lines = []
                 item_lines.append(r"\item (%s分) %s" % (pq.score or slot["score"], self._escape_latex(q.question_text)))
                 # 选项
-                if q.options:
-                    opts = []
-                    for opt in q.options:
-                        opts.append(self._escape_latex(opt))
+                if q.options and len(q.options) == 4 and (q.question_type or "").startswith("choice"):
+                    a, b, c, d = q.options
+                    item_lines.append(r"\choicefour{%s}{%s}{%s}{%s}" % (
+                        self._escape_latex(a),
+                        self._escape_latex(b),
+                        self._escape_latex(c),
+                        self._escape_latex(d),
+                    ))
+                elif q.options:
                     item_lines.append(r"\begin{enumerate}[label=\Alph*. ,leftmargin=1.2em,itemsep=0.2em]")
-                    for opt in opts:
-                        item_lines.append(r"\item %s" % opt)
+                    for opt in q.options:
+                        item_lines.append(r"\item %s" % self._escape_latex(opt))
                     item_lines.append(r"\end{enumerate}")
                 # 图形
                 if q.has_geometry and q.geometry_tikz:
@@ -418,6 +423,22 @@ class ExportService:
                 continue
             item = []
             item.append(f"\\item ({pq.score}分) {self._escape_latex(q.question_text)}")
+            # 选项渲染
+            if q.options and len(q.options) == 4 and (q.question_type or "").startswith("choice"):
+                a, b, c, d = q.options
+                item.append("\n" + r"\choicefour{%s}{%s}{%s}{%s}" % (
+                    self._escape_latex(a),
+                    self._escape_latex(b),
+                    self._escape_latex(c),
+                    self._escape_latex(d),
+                ) + "\n")
+            elif q.options:
+                # 其他数量选项，按列表
+                item.append(r"\begin{enumerate}[label=\Alph*. ,leftmargin=1.2em,itemsep=0.2em]")
+                for opt in q.options:
+                    item.append(r"\item %s" % self._escape_latex(opt))
+                item.append(r"\end{enumerate}")
+            # 图形
             if q.has_geometry and q.geometry_tikz:
                 item.append("\n" + q.geometry_tikz + "\n")
             elif q.has_geometry and q.geometry_svg:
@@ -677,12 +698,36 @@ class ExportService:
 
     def _escape_latex(self, text: str) -> str:
         """
-        转义特殊字符，保留数学环境中的 $ 和反斜杠。
+        转义特殊字符，但保留数学环境 $...$ 和 $$...$$ 内的内容不转义。
         """
         if not text:
             return ""
+        import re
+        
         # 先简单清洗 Markdown
         text = self._clean_markdown(text)
+        
+        # 使用正则分割，保留数学环境
+        # 匹配 $$...$$ 或 $...$（非贪婪）
+        pattern = r'(\$\$.*?\$\$|\$.*?\$)'
+        parts = re.split(pattern, text, flags=re.DOTALL)
+        
+        result = []
+        for i, part in enumerate(parts):
+            if part.startswith('$$') or part.startswith('$'):
+                # 数学环境，直接保留
+                result.append(part)
+            else:
+                # 非数学环境，转义特殊字符
+                escaped = self._escape_text_only(part)
+                result.append(escaped)
+        
+        return ''.join(result)
+    
+    def _escape_text_only(self, text: str) -> str:
+        """
+        仅转义普通文本中的特殊字符（不在数学环境中）。
+        """
         replacements = {
             "&": r"\&",
             "%": r"\%",

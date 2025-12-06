@@ -148,10 +148,10 @@ export default function PapersPage() {
                       onClick={() => handleExport(paper.id, 'docx')}
                       disabled={exportingId === paper.id}
                       className="gap-1"
-                    >
-                      <FileDown className="w-4 h-4" />
-                      Word
-                    </Button>
+                   >
+                     <FileDown className="w-4 h-4" />
+                     Word
+                   </Button>
                     <Button
                       variant="secondary"
                       size="sm"
