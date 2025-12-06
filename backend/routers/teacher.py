@@ -453,7 +453,7 @@ async def search_questions_semantic(
         # 转换为前端需要的格式
         questions = []
         for r in results:
-            q = db.query(orm.Question).filter(orm.Question.id == r["question_id"]).first()
+            q = db.query(orm.Question).filter(orm.Question.id == r["id"]).first()
             if q:
                 questions.append({
                     "id": q.id,
