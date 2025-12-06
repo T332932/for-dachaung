@@ -25,8 +25,24 @@ interface SelectedQuestion extends Question {
     order: number;
 }
 
+// 模板槽位接口
+interface Slot {
+    order: number;
+    questionType: string;
+    defaultScore: number;
+    question?: Question;  // 已填入的题目
+}
+
+// 题型中文名
+const questionTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+        'choice': '单选', 'multi': '多选', 'fillblank': '填空', 'solve': '解答'
+    };
+    return labels[type] || type;
+};
+
 // 模板定义
-const TEMPLATES = {
+const TEMPLATES: Record<string, { name: string; total?: number; slots: Omit<Slot, 'question'>[] }> = {
     custom: { name: '自由组卷', slots: [] },
     gaokao_new_1: {
         name: '2025 全国卷 I（新高考）',
@@ -74,6 +90,26 @@ export default function CreatePaperPage() {
 
     // 悬浮预览
     const [hoverQuestion, setHoverQuestion] = useState<Question | SelectedQuestion | null>(null);
+
+    // 模板槽位状态
+    const [templateSlots, setTemplateSlots] = useState<Slot[]>([]);
+    const [activeSlot, setActiveSlot] = useState<number | null>(null);  // 当前选中的槽位序号
+
+    // 当模板变化时，初始化槽位
+    const initializeSlots = (newTemplateId: string) => {
+        const template = TEMPLATES[newTemplateId];
+        if (template && template.slots.length > 0) {
+            setTemplateSlots(template.slots.map(s => ({ ...s, question: undefined })));
+            setActiveSlot(1);  // 默认选中第一个槽位
+            setSelectedQuestions([]);  // 清空自由组卷的题目
+        } else {
+            setTemplateSlots([]);
+            setActiveSlot(null);
+        }
+    };
+
+    // 判断是否是模板模式
+    const isTemplateMode = templateSlots.length > 0;
 
     // 搜索题目
     const handleSearch = async () => {
@@ -124,6 +160,27 @@ export default function CreatePaperPage() {
 
     // 添加题目到试卷
     const addQuestion = (question: Question) => {
+        // 模板模式：填充到当前选中的槽位
+        if (isTemplateMode && activeSlot !== null) {
+            // 检查是否已在其他槽位使用
+            if (templateSlots.some(s => s.question?.id === question.id)) {
+                alert('该题目已添加到其他位置');
+                return;
+            }
+            setTemplateSlots(prev => prev.map(slot =>
+                slot.order === activeSlot
+                    ? { ...slot, question }
+                    : slot
+            ));
+            // 自动跳转到下一个空槽位
+            const nextEmpty = templateSlots.find(s => s.order > activeSlot && !s.question);
+            if (nextEmpty) {
+                setActiveSlot(nextEmpty.order);
+            }
+            return;
+        }
+
+        // 自由模式：追加到列表
         if (selectedQuestions.find(q => q.id === question.id)) {
             alert('该题目已添加');
             return;
@@ -136,6 +193,13 @@ export default function CreatePaperPage() {
                 order: prev.length + 1,
             }
         ]);
+    };
+
+    // 从模板槽位移除题目
+    const removeSlotQuestion = (slotOrder: number) => {
+        setTemplateSlots(prev => prev.map(slot =>
+            slot.order === slotOrder ? { ...slot, question: undefined } : slot
+        ));
     };
 
     // 移除题目
@@ -225,7 +289,11 @@ export default function CreatePaperPage() {
                             <select
                                 className="h-10 px-3 rounded-lg border border-input bg-background text-sm"
                                 value={templateId}
-                                onChange={(e) => setTemplateId(e.target.value as keyof typeof TEMPLATES)}
+                                onChange={(e) => {
+                                    const newId = e.target.value;
+                                    setTemplateId(newId);
+                                    initializeSlots(newId);
+                                }}
                             >
                                 {Object.entries(TEMPLATES).map(([id, t]) => (
                                     <option key={id} value={id}>{t.name}</option>
@@ -390,9 +458,9 @@ export default function CreatePaperPage() {
                             <div className="p-5 border-b border-border shrink-0">
                                 <h2 className="text-lg font-semibold flex items-center gap-2">
                                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs">
-                                        {selectedQuestions.length}
+                                        {isTemplateMode ? templateSlots.filter(s => s.question).length : selectedQuestions.length}
                                     </span>
-                                    已选题目
+                                    {isTemplateMode ? `试卷结构 (${templateSlots.filter(s => s.question).length}/${templateSlots.length})` : '已选题目'}
                                 </h2>
                             </div>
 
