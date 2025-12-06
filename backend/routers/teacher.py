@@ -455,14 +455,17 @@ async def search_questions_semantic(
         for r in results:
             q = db.query(orm.Question).filter(orm.Question.id == r["id"]).first()
             if q:
+                # options 和 knowledge_points 可能已经是 list（PostgreSQL JSON 字段），也可能是字符串
+                options = q.options if isinstance(q.options, list) else (json.loads(q.options) if q.options else None)
+                kp = q.knowledge_points if isinstance(q.knowledge_points, list) else (json.loads(q.knowledge_points) if q.knowledge_points else [])
                 questions.append({
                     "id": q.id,
                     "questionText": q.question_text,
-                    "options": json.loads(q.options) if q.options else None,
+                    "options": options,
                     "answer": q.answer,
                     "questionType": q.question_type,
                     "difficulty": q.difficulty,
-                    "knowledgePoints": json.loads(q.knowledge_points) if q.knowledge_points else [],
+                    "knowledgePoints": kp,
                     "isPublic": q.is_public,
                     "similarity": r.get("similarity", 0),
                 })
