@@ -181,6 +181,18 @@ export const authApi = {
     }
     return null;
   },
+
+  // 获取当前用户
+  getUser: (): { username: string; role: string } | null => {
+    const token = authApi.getToken();
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return { username: payload.sub, role: payload.role };
+    } catch (e) {
+      return null;
+    }
+  },
 };
 
 // 题目相关 API

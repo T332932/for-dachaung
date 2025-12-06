@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card } from '@/components/ui/Card';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { adminApi, authApi } from '@/lib/api-client';
 import { Check, X, AlertTriangle, FileText } from 'lucide-react';
@@ -100,8 +100,8 @@ export default function AdminReviewsPage() {
                                 <div className="flex justify-between items-start gap-4 mb-4">
                                     <div className="flex items-center gap-2">
                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${review.reviewType === 'duplicate' ? 'bg-red-100 text-red-700' :
-                                                review.reviewType === 'suspicious' ? 'bg-orange-100 text-orange-700' :
-                                                    'bg-yellow-100 text-yellow-700'
+                                            review.reviewType === 'suspicious' ? 'bg-orange-100 text-orange-700' :
+                                                'bg-yellow-100 text-yellow-700'
                                             }`}>
                                             {review.reviewType === 'duplicate' ? '疑似重题' :
                                                 review.reviewType === 'suspicious' ? '疑似坏题' : '高度相似'}
@@ -116,7 +116,7 @@ export default function AdminReviewsPage() {
                                     <div className="flex gap-2">
                                         <Button
                                             size="sm"
-                                            variant="default"
+                                            variant="primary"
                                             className="bg-green-600 hover:bg-green-700"
                                             onClick={() => handleApprove(review.id)}
                                             disabled={!!processingId}
@@ -126,7 +126,7 @@ export default function AdminReviewsPage() {
                                         </Button>
                                         <Button
                                             size="sm"
-                                            variant="destructive"
+                                            variant="danger"
                                             onClick={() => handleReject(review.id)}
                                             disabled={!!processingId}
                                         >
