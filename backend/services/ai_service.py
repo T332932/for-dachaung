@@ -156,11 +156,12 @@ class AIService:
 - questionType 只能是 choice/multi/fillblank/solve/proof 之一，禁止组合值。
 - isHighSchool 为 true 仅限高中数学题；如果不是高中数学或无法判断，请返回 false。
 SVG 生成要求：
-- 使用 <line>, <circle>, <ellipse>, <path>, <text> 标签
-- 虚线用 stroke-dasharray="5,5"
-- 文本标注用 <text> 标签，内容为数学符号
-- viewBox="0 0 400 400"，坐标准确
-- 必须是合法 SVG，坐标/属性正确，避免重复属性或拼写错误"""
+ - 使用 <line>, <circle>, <ellipse>, <path>, <text> 标签
+ - 虚线用 stroke-dasharray="5,5"
+ - 文本标注用 <text> 标签，内容为数学符号
+ - viewBox="0 0 400 400"，坐标准确
+ - 必须是合法 SVG，坐标/属性正确，避免重复属性或拼写错误
+ - 符号与图形不要重叠，文字标注与线段/节点保持至少 6-10px 间距，避免遮挡"""
         
         # 如果有自定义提示词，用它替换默认说明
         if custom_prompt:

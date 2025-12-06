@@ -41,13 +41,13 @@ export default function PapersPage() {
     setExportingId(paperId);
     try {
       const blob = format === 'pdf'
-        ? await paperApi.exportPdf(paperId)
-        : await paperApi.exportDocx(paperId);
+        ? await paperApi.exportPdf(paperId, { includeAnswer: false, includeExplanation: false })
+        : await paperApi.exportDocx(paperId, { includeAnswer: false, includeExplanation: false });
 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `试卷.${format}`;
+      a.download = `试卷（无答案）.${format}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

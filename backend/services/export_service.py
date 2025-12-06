@@ -42,15 +42,33 @@ class ExportService:
         """
         header = r"""\documentclass[12pt]{ctexart}
 \usepackage[UTF8,fontset=none]{ctex} %% 避免缺少 fandol 字体
-\setCJKmainfont{Noto Sans CJK SC}
+\setCJKmainfont{Noto Serif CJK SC}
 \setCJKsansfont{Noto Sans CJK SC}
 \setCJKmonofont{Noto Sans Mono CJK SC}
+\usepackage{unicode-math}
+\setmathfont{Latin Modern Math}
 \usepackage{amsmath,amssymb}
-\usepackage{geometry,graphicx,enumitem}
-\geometry{paperheight=26cm,paperwidth=18.4cm,left=2cm,right=2cm,top=1.5cm,bottom=2cm}
+\usepackage{geometry,graphicx,enumitem,tikz,fancyhdr}
+\usepackage[bodytextleadingratio=1.67,restoremathleading=true]{zhlineskip}
+\geometry{paperheight=26cm,paperwidth=18.4cm,left=2cm,right=2cm,top=1.5cm,bottom=2cm,headsep=10pt}
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0pt}
 \setlength{\parskip}{0.6em}
 \setlength{\parindent}{0pt}
+\providecommand{\SetMathEnvironmentSinglespace}[1]{}
+\newcommand{\choicefour}[4]{%
+  \begin{tabular}{p{0.45\textwidth}p{0.45\textwidth}}
+  \textsf{A}.~#1 & \textsf{B}.~#2\\
+  \textsf{C}.~#3 & \textsf{D}.~#4
+  \end{tabular}
+}
 \begin{document}
+\SetMathEnvironmentSinglespace{1}
+\lineskiplimit=5.5pt
+\lineskip=7pt
+\abovedisplayshortskip=5pt
+\belowdisplayshortskip=5pt
+\abovedisplayskip=5pt
 \begin{center}\Large %s\end{center}
 """ % self._escape_latex(paper.title)
 
@@ -164,13 +182,34 @@ class ExportService:
         - 解答题：题号+完整答案
         """
         header = r"""\documentclass[12pt]{ctexart}
+\usepackage[UTF8,fontset=none]{ctex}
+\setCJKmainfont{Noto Serif CJK SC}
+\setCJKsansfont{Noto Sans CJK SC}
+\setCJKmonofont{Noto Sans Mono CJK SC}
+\usepackage{unicode-math}
+\setmathfont{Latin Modern Math}
 \usepackage{amsmath,amssymb}
-\usepackage{geometry,graphicx,enumitem}
-\usepackage{array,booktabs}
-\geometry{a4paper,left=2.5cm,right=2.5cm,top=2cm,bottom=2cm}
+\usepackage{geometry,graphicx,enumitem,array,booktabs,tikz,fancyhdr}
+\usepackage[bodytextleadingratio=1.67,restoremathleading=true]{zhlineskip}
+\geometry{paperheight=26cm,paperwidth=18.4cm,left=2cm,right=2cm,top=1.5cm,bottom=2cm,headsep=10pt}
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0pt}
 \setlength{\parskip}{0.6em}
 \setlength{\parindent}{0pt}
+\providecommand{\SetMathEnvironmentSinglespace}[1]{}
+\newcommand{\choicefour}[4]{%
+  \begin{tabular}{p{0.45\textwidth}p{0.45\textwidth}}
+  \textsf{A}.~#1 & \textsf{B}.~#2\\
+  \textsf{C}.~#3 & \textsf{D}.~#4
+  \end{tabular}
+}
 \begin{document}
+\SetMathEnvironmentSinglespace{1}
+\lineskiplimit=5.5pt
+\lineskip=7pt
+\abovedisplayshortskip=5pt
+\belowdisplayshortskip=5pt
+\abovedisplayskip=5pt
 \begin{center}\Large\textbf{%s — 答案卷}\end{center}
 \vspace{1em}
 """ % self._escape_latex(paper.title)
@@ -341,19 +380,29 @@ class ExportService:
         include_answer: bool = True,
         include_explanation: bool = True,
     ) -> Tuple[str, List[Tuple[str, bytes]]]:
-        header = r"""\documentclass[12pt,a4paper]{article}
+        header = r"""\documentclass[12pt]{ctexart}
 \usepackage[UTF8,fontset=none]{ctex} %% 避免缺少 fandol 字体
-\setCJKmainfont{Noto Sans CJK SC}
+\setCJKmainfont{Noto Serif CJK SC}
 \setCJKsansfont{Noto Sans CJK SC}
 \setCJKmonofont{Noto Sans Mono CJK SC}
+\usepackage{unicode-math}
+\setmathfont{Latin Modern Math}
 \usepackage{amsmath,amssymb}
-\usepackage{geometry}
-\usepackage{graphicx}
-\usepackage{enumitem}
-\usepackage{tikz}
-\geometry{left=2cm,right=2cm,top=2.5cm,bottom=2.5cm}
+\usepackage{geometry,graphicx,enumitem,tikz,fancyhdr}
+\usepackage[bodytextleadingratio=1.67,restoremathleading=true]{zhlineskip}
+\geometry{paperheight=26cm,paperwidth=18.4cm,left=2cm,right=2cm,top=1.5cm,bottom=2cm,headsep=10pt}
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0pt}
 \setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+\providecommand{\SetMathEnvironmentSinglespace}[1]{}
 \begin{document}
+\SetMathEnvironmentSinglespace{1}
+\lineskiplimit=5.5pt
+\lineskip=7pt
+\abovedisplayshortskip=5pt
+\belowdisplayshortskip=5pt
+\abovedisplayskip=5pt
 \begin{center}
 \Large %s
 \end{center}
@@ -392,8 +441,14 @@ class ExportService:
 
     def compile_pdf(self, latex_content: str, attachments: List[Tuple[str, bytes]] | None = None) -> tuple[bool, str | Path, str]:
         """
-        调用 pdflatex 编译，返回 (ok, path/message, log_text)
+        调用 xelatex 编译，返回 (ok, path/message, log_text)
         """
+        import shutil
+
+        engine = shutil.which("xelatex")
+        if not engine:
+            return False, "xelatex not found (please install texlive-xetex)", ""
+
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
                 tmp_path = Path(tmpdir)
@@ -403,7 +458,7 @@ class ExportService:
                 for fname, data in attachments or []:
                     (tmp_path / fname).write_bytes(data)
                 cmd = [
-                    "xelatex",
+                    engine,
                     "-interaction=nonstopmode",
                     "-halt-on-error",
                     tex_file.name,
@@ -422,9 +477,9 @@ class ExportService:
                         tmp_out.write(pdf_file.read_bytes())
                         out_file = Path(tmp_out.name)
                     return True, out_file, log
-                return False, log or "pdflatex failed", log
+                return False, log or "xelatex failed", log
         except FileNotFoundError as exc:
-            return False, "pdflatex not found in PATH", str(exc)
+            return False, "xelatex not found in PATH", str(exc)
         except Exception as exc:  # pragma: no cover - unexpected
             return False, f"compile error: {exc}", str(exc)
 
@@ -602,15 +657,35 @@ class ExportService:
         except Exception:
             return None
 
+    def _clean_markdown(self, text: str) -> str:
+        """
+        简单去掉常见的 Markdown 标记，保留公式/纯文本。
+        """
+        if not text:
+            return ""
+        import re
+        t = text
+        # 去掉代码块
+        t = re.sub(r"```.*?```", "", t, flags=re.S)
+        # 去掉标题符号
+        t = re.sub(r"^\\s*#{1,6}\\s*", "", t, flags=re.M)
+        # 去掉加粗/斜体标记
+        t = t.replace("**", "").replace("__", "").replace("*", "")
+        # 去掉列表标记
+        t = re.sub(r"^\\s*[-+*]\\s+", "", t, flags=re.M)
+        return t.strip()
+
     def _escape_latex(self, text: str) -> str:
         """
-        简单转义特殊字符，避免编译报错。
+        转义特殊字符，保留数学环境中的 $ 和反斜杠。
         """
+        if not text:
+            return ""
+        # 先简单清洗 Markdown
+        text = self._clean_markdown(text)
         replacements = {
-            "\\": r"\textbackslash{}",
             "&": r"\&",
             "%": r"\%",
-            "$": r"\$",
             "#": r"\#",
             "_": r"\_",
             "{": r"\{",
@@ -619,6 +694,6 @@ class ExportService:
             "^": r"\^{}",
         }
         out = []
-        for ch in text or "":
+        for ch in text:
             out.append(replacements.get(ch, ch))
         return "".join(out)
