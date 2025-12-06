@@ -145,6 +145,132 @@ class ExportService:
             "start": slots_sorted[0].order if slots_sorted else 1,
             "slots": [{"order": s.order, "score": s.default_score} for s in slots_sorted],
         }]
+
+    def build_answer_latex(
+        self,
+        paper: orm.Paper,
+        pq_list: List[orm.PaperQuestion],
+        question_map: Mapping[str, orm.Question],
+    ) -> Tuple[str, List[Tuple[str, bytes]]]:
+        """
+        生成答案卷 LaTeX：
+        - 选择题（单选/多选）：表格显示题号+答案字母
+        - 填空题：题号+答案值
+        - 解答题：题号+完整答案
+        """
+        header = r"""\documentclass[12pt]{ctexart}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry,graphicx,enumitem}
+\usepackage{array,booktabs}
+\geometry{a4paper,left=2.5cm,right=2.5cm,top=2cm,bottom=2cm}
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+\begin{document}
+\begin{center}\Large\textbf{%s — 答案卷}\end{center}
+\vspace{1em}
+""" % self._escape_latex(paper.title)
+
+        attachments: List[Tuple[str, bytes]] = []
+        body_parts: List[str] = []
+        
+        # 按 order 排序
+        pq_sorted = sorted(pq_list, key=lambda x: x.order)
+        
+        # 分类题目
+        choices = []  # 单选 1-8
+        multis = []   # 多选 9-11
+        fillblanks = []  # 填空 12-14
+        solves = []   # 解答 15-19
+        
+        for pq in pq_sorted:
+            q = question_map.get(pq.question_id)
+            if not q:
+                continue
+            order = pq.order
+            if 1 <= order <= 8:
+                choices.append((order, q))
+            elif 9 <= order <= 11:
+                multis.append((order, q))
+            elif 12 <= order <= 14:
+                fillblanks.append((order, q))
+            else:
+                solves.append((order, q))
+        
+        def extract_answer_letter(answer_text: str) -> str:
+            """从答案文本中提取选项字母（如 A/B/C/D 或 AB/CD）"""
+            if not answer_text:
+                return ""
+            # 尝试提取【答案】后的内容
+            import re
+            match = re.search(r'【答案】\s*([A-Za-z]+)', answer_text)
+            if match:
+                return match.group(1).upper()
+            # 直接匹配开头的字母
+            match = re.match(r'^([A-Za-z]+)', answer_text.strip())
+            if match:
+                return match.group(1).upper()
+            # 返回前20字符作为fallback
+            return answer_text.strip()[:20]
+        
+        def extract_fillblank_answer(answer_text: str) -> str:
+            """从答案文本中提取填空答案"""
+            if not answer_text:
+                return ""
+            import re
+            match = re.search(r'【答案】\s*(.+?)(?=【|$)', answer_text, re.DOTALL)
+            if match:
+                return match.group(1).strip()[:50]
+            return answer_text.strip()[:50]
+        
+        # 一、单选题答案表格
+        if choices:
+            body_parts.append(r"{\bf 一、选择题答案}")
+            body_parts.append(r"\begin{center}")
+            body_parts.append(r"\begin{tabular}{|" + "c|" * len(choices) + "}")
+            body_parts.append(r"\hline")
+            body_parts.append(" & ".join([str(o) for o, _ in choices]) + r" \\")
+            body_parts.append(r"\hline")
+            body_parts.append(" & ".join([extract_answer_letter(q.answer) for _, q in choices]) + r" \\")
+            body_parts.append(r"\hline")
+            body_parts.append(r"\end{tabular}")
+            body_parts.append(r"\end{center}")
+            body_parts.append(r"\vspace{1em}")
+        
+        # 二、多选题答案表格
+        if multis:
+            body_parts.append(r"{\bf 二、多选题答案}")
+            body_parts.append(r"\begin{center}")
+            body_parts.append(r"\begin{tabular}{|" + "c|" * len(multis) + "}")
+            body_parts.append(r"\hline")
+            body_parts.append(" & ".join([str(o) for o, _ in multis]) + r" \\")
+            body_parts.append(r"\hline")
+            body_parts.append(" & ".join([extract_answer_letter(q.answer) for _, q in multis]) + r" \\")
+            body_parts.append(r"\hline")
+            body_parts.append(r"\end{tabular}")
+            body_parts.append(r"\end{center}")
+            body_parts.append(r"\vspace{1em}")
+        
+        # 三、填空题答案
+        if fillblanks:
+            body_parts.append(r"{\bf 三、填空题答案}")
+            body_parts.append(r"\begin{enumerate}[label=\arabic*.,start=12,leftmargin=1.5em]")
+            for order, q in fillblanks:
+                ans = extract_fillblank_answer(q.answer)
+                body_parts.append(r"\item %s" % self._escape_latex(ans))
+            body_parts.append(r"\end{enumerate}")
+            body_parts.append(r"\vspace{1em}")
+        
+        # 四、解答题完整答案
+        if solves:
+            body_parts.append(r"{\bf 四、解答题答案}")
+            body_parts.append(r"\begin{enumerate}[label=\arabic*.,start=15,leftmargin=1.5em,itemsep=1.5em]")
+            for order, q in solves:
+                body_parts.append(r"\item %s" % self._escape_latex(q.answer or "（无答案）"))
+            body_parts.append(r"\end{enumerate}")
+        
+        footer = r"\end{document}"
+        return header + "\n\n".join(body_parts) + "\n" + footer, attachments
+
     def build_single_question_latex(
         self,
         question: dict,

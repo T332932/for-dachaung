@@ -345,6 +345,15 @@ export const paperApi = {
     return response.data;
   },
 
+  // 导出答案卷 PDF
+  exportAnswer: async (id: string): Promise<Blob> => {
+    const response = await api.get(`/api/teacher/papers/${id}/export-answer`, {
+      params: { format: 'pdf' },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   // 删除试卷
   delete: async (id: string) => {
     const response = await api.delete(`/api/teacher/papers/${id}`);

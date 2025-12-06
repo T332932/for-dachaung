@@ -60,6 +60,26 @@ export default function PapersPage() {
     }
   };
 
+  const handleExportAnswer = async (paperId: string) => {
+    setExportingId(paperId);
+    try {
+      const blob = await paperApi.exportAnswer(paperId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `答案卷.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.userMessage || '导出答案卷失败');
+    } finally {
+      setExportingId(null);
+    }
+  };
+
   const handleDelete = async (paperId: string) => {
     if (!confirm('确定要删除这份试卷吗？此操作不可撤销。')) return;
     try {
@@ -131,6 +151,15 @@ export default function PapersPage() {
                     >
                       <FileDown className="w-4 h-4" />
                       Word
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleExportAnswer(paper.id)}
+                      disabled={exportingId === paper.id}
+                      className="gap-1"
+                    >
+                      📝 答案卷
                     </Button>
                     <Button
                       variant="ghost"

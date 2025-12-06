@@ -500,6 +500,46 @@ async def export_paper(
     return await export_service.export_stub(paper_id, format, payload)
 
 
+@router.get("/papers/{paper_id}/export-answer")
+async def export_paper_answer(
+    paper_id: str,
+    format: str = Query("pdf", pattern="^(pdf|latex)$"),
+    db: Session = Depends(get_db),
+    background_tasks: BackgroundTasks = None,
+):
+    """
+    导出答案卷：
+    - 选择题/填空题：只显示答案结果
+    - 解答题：显示完整答案
+    """
+    paper = db.query(orm.Paper).filter(orm.Paper.id == paper_id).first()
+    if not paper:
+        raise HTTPException(status_code=404, detail="paper not found")
+    qlist = paper.questions
+    question_ids = [pq.question_id for pq in qlist]
+    questions = db.query(orm.Question).filter(orm.Question.id.in_(question_ids)).all()
+    qmap = {q.id: q for q in questions}
+
+    latex, attachments = export_service.build_answer_latex(paper, qlist, qmap)
+
+    if format == "latex":
+        return {"latex": latex, "paper_id": paper_id}
+
+    if format == "pdf":
+        ok, out, log = export_service.compile_pdf(latex, attachments=attachments)
+        if ok:
+            file_path = Path(out)
+            bg = background_tasks or BackgroundTasks()
+            bg.add_task(export_service.cleanup_file, file_path)
+            return FileResponse(
+                file_path,
+                media_type="application/pdf",
+                filename=f"{paper.title or 'paper'}_答案卷.pdf",
+                background=bg,
+            )
+        raise HTTPException(status_code=500, detail={"error": "pdf_export_failed", "detail": out, "latex": latex, "log": log})
+
+
 @router.post("/papers", response_model=PaperCreateResponse)
 async def create_paper(
     payload: PaperCreateRequest,
