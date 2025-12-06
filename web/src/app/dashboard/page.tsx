@@ -1,12 +1,23 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { questionApi } from '@/lib/api-client';
 import { MathText } from '@/components/ui/MathText';
 import { QuestionAnalysisResult } from '@/components/question/QuestionUploader';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 type ItemStatus = 'pending' | 'processing' | 'ready' | 'error' | 'saved' | 'ingesting';
+
+// 存储版本（用 base64 存储文件）
+interface StoredItem {
+  id: string;
+  name: string;
+  base64: string; // 文件的 base64
+  mimeType: string;
+  status: ItemStatus;
+  result?: QuestionAnalysisResult;
+  error?: string;
+}
 
 interface QueueItem {
   id: string;
@@ -17,23 +28,110 @@ interface QueueItem {
   error?: string;
 }
 
-export default function BatchUploader() {
+const STORAGE_KEY = 'zujuan_upload_queue';
+
+// base64 转 File
+function base64ToFile(base64: string, name: string, mimeType: string): File {
+  const byteString = atob(base64.split(',')[1] || base64);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  return new File([ab], name, { type: mimeType });
+}
+
+// File 转 base64
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+export default function UploadPage() {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const addFiles = (files: FileList | null) => {
+  // 从 localStorage 恢复
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed: StoredItem[] = JSON.parse(stored);
+        const restored: QueueItem[] = parsed
+          .filter(item => item.status !== 'saved') // 不恢复已入库的
+          .map(item => ({
+            id: item.id,
+            name: item.name,
+            file: base64ToFile(item.base64, item.name, item.mimeType),
+            status: item.status === 'processing' || item.status === 'ingesting' ? 'pending' : item.status,
+            result: item.result,
+            error: item.error,
+          }));
+        setItems(restored);
+      }
+    } catch (e) {
+      console.error('Failed to restore upload queue:', e);
+    }
+    setLoaded(true);
+  }, []);
+
+  // 保存到 localStorage
+  const saveToStorage = useCallback(async (newItems: QueueItem[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const toStore: StoredItem[] = await Promise.all(
+        newItems
+          .filter(item => item.status !== 'saved') // 已入库的不存
+          .map(async (item) => ({
+            id: item.id,
+            name: item.name,
+            base64: await fileToBase64(item.file),
+            mimeType: item.file.type,
+            status: item.status,
+            result: item.result,
+            error: item.error,
+          }))
+      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+    } catch (e) {
+      console.error('Failed to save upload queue:', e);
+    }
+  }, []);
+
+  // 更新 items 并同步存储
+  const updateItems = useCallback((updater: (prev: QueueItem[]) => QueueItem[]) => {
+    setItems(prev => {
+      const next = updater(prev);
+      saveToStorage(next);
+      return next;
+    });
+  }, [saveToStorage]);
+
+  const addFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const newItems: QueueItem[] = Array.from(files).map((f) => ({
       id: `${f.name}-${Date.now()}-${Math.random()}`,
       file: f,
       name: f.name,
-      status: 'pending',
+      status: 'pending' as ItemStatus,
     }));
-    setItems((prev) => [...prev, ...newItems]);
+    const allItems = [...items, ...newItems];
+    setItems(allItems);
+    await saveToStorage(allItems);
+  };
+
+  const removeItem = (id: string) => {
+    updateItems(prev => prev.filter(it => it.id !== id));
   };
 
   const runPreview = useCallback(async (item: QueueItem) => {
-    setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, status: 'processing', error: undefined } : it)));
+    updateItems(prev => prev.map((it) => (it.id === item.id ? { ...it, status: 'processing', error: undefined } : it)));
     try {
       const result = (await questionApi.preview(item.file)) as any;
       const merged: QuestionAnalysisResult = {
@@ -44,43 +142,40 @@ export default function BatchUploader() {
       if (!merged.questionText?.trim() || !merged.answer?.trim() || !merged.questionType) {
         throw new Error('解析结果缺少题干/答案/题型');
       }
-      setItems((prev) =>
+      updateItems(prev =>
         prev.map((it) => (it.id === item.id ? { ...it, status: 'ready', result: merged, error: undefined } : it)),
       );
     } catch (err: any) {
-      setItems((prev) =>
+      updateItems(prev =>
         prev.map((it) => (it.id === item.id ? { ...it, status: 'error', error: err?.message || '解析失败' } : it)),
       );
     }
-  }, []);
+  }, [updateItems]);
 
   const runAll = async () => {
     setIsUploading(true);
     for (const it of items) {
       if (it.status === 'pending' || it.status === 'error') {
-        // eslint-disable-next-line no-await-in-loop
         await runPreview(it);
       }
     }
     setIsUploading(false);
   };
 
-  // 快速入库模式：上传 → AI分析 → 自动保存
   const ingestItem = async (item: QueueItem) => {
-    setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, status: 'ingesting', error: undefined } : it)));
+    updateItems(prev => prev.map((it) => (it.id === item.id ? { ...it, status: 'ingesting', error: undefined } : it)));
     try {
       await questionApi.ingest(item.file);
-      setItems((prev) =>
+      updateItems(prev =>
         prev.map((it) => (it.id === item.id ? { ...it, status: 'saved', error: undefined } : it)),
       );
     } catch (err: any) {
-      setItems((prev) =>
+      updateItems(prev =>
         prev.map((it) => (it.id === item.id ? { ...it, status: 'error', error: err?.userMessage || err?.message || '入库失败' } : it)),
       );
     }
   };
 
-  // 快速入库所有
   const ingestAll = async () => {
     setIsUploading(true);
     for (const it of items) {
@@ -105,7 +200,7 @@ export default function BatchUploader() {
       alert('题干/答案/题型或选项不完整');
       return;
     }
-    setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, status: 'processing' } : it)));
+    updateItems(prev => prev.map((it) => (it.id === item.id ? { ...it, status: 'processing' } : it)));
     try {
       await questionApi.create({
         questionText: res?.questionText || '',
@@ -123,10 +218,10 @@ export default function BatchUploader() {
         aiGenerated: true,
         isPublic: false,
       });
-      setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, status: 'saved' } : it)));
+      updateItems(prev => prev.map((it) => (it.id === item.id ? { ...it, status: 'saved' } : it)));
     } catch (err: any) {
       alert(err?.userMessage || '入库失败');
-      setItems((prev) =>
+      updateItems(prev =>
         prev.map((it) => (it.id === item.id ? { ...it, status: 'ready', error: err?.message } : it)),
       );
     }
@@ -136,6 +231,21 @@ export default function BatchUploader() {
     e.preventDefault();
     addFiles(e.dataTransfer.files);
   };
+
+  const clearSaved = () => {
+    updateItems(prev => prev.filter(it => it.status !== 'saved'));
+  };
+
+  if (!loaded) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12 text-muted-foreground">加载中...</div>
+      </DashboardLayout>
+    );
+  }
+
+  const savedCount = items.filter(it => it.status === 'saved').length;
+  const pendingItems = items.filter(it => it.status !== 'saved');
 
   return (
     <DashboardLayout>
@@ -151,7 +261,7 @@ export default function BatchUploader() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
           >
-            <p className="font-medium text-foreground mb-2">拖拽或点击选择多个图片文件</p>
+            <p className="font-medium text-foreground mb-2">拖拽或点击选择图片文件</p>
             <input
               type="file"
               multiple
@@ -163,21 +273,29 @@ export default function BatchUploader() {
           <div className="mt-4 flex gap-2 flex-wrap">
             <button
               onClick={runAll}
-              disabled={isUploading || items.length === 0}
+              disabled={isUploading || pendingItems.length === 0}
               className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 disabled:opacity-50 font-medium"
             >
               {isUploading ? '处理中…' : '解析预览'}
             </button>
             <button
               onClick={ingestAll}
-              disabled={isUploading || items.length === 0}
+              disabled={isUploading || pendingItems.length === 0}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 font-medium"
             >
               {isUploading ? '处理中…' : '✨ 快速入库（无需预览）'}
             </button>
+            {savedCount > 0 && (
+              <button
+                onClick={clearSaved}
+                className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-secondary"
+              >
+                清除已入库 ({savedCount})
+              </button>
+            )}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            💡 “快速入库”模式会自动分析并保存到题库，您可以离开页面，稍后在题库中查看
+            💡 上传的文件会保存在本地，刷新页面不会丢失。入库后自动清除。
           </p>
         </div>
 
@@ -199,10 +317,17 @@ export default function BatchUploader() {
                 </div>
                 <div className="space-x-2">
                   <button
-                    onClick={() => runPreview(item)}
-                    className="px-3 py-1 border border-border rounded-lg text-sm hover:bg-secondary transition-colors"
+                    onClick={() => removeItem(item.id)}
+                    className="px-3 py-1 border border-destructive text-destructive rounded-lg text-sm hover:bg-destructive/10"
                   >
-                    重新生成
+                    删除
+                  </button>
+                  <button
+                    onClick={() => runPreview(item)}
+                    disabled={item.status === 'processing' || item.status === 'ingesting'}
+                    className="px-3 py-1 border border-border rounded-lg text-sm hover:bg-secondary transition-colors disabled:opacity-50"
+                  >
+                    重新解析
                   </button>
                   <button
                     onClick={() => ingestItem(item)}
