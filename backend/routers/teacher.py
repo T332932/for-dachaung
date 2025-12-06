@@ -419,13 +419,17 @@ async def create_question(
         db.commit()
         db.refresh(q)
         
-        # 后台异步生成 embedding 索引
+        # 后台异步生成 embedding 索引（使用 asyncio.create_task 避免阻塞）
         async def index_in_background(question_id: str):
-            from db import session_scope
-            with session_scope() as bg_db:
-                await rag_service.index_question(bg_db, question_id)
+            try:
+                from db import session_scope
+                with session_scope() as bg_db:
+                    await rag_service.index_question(bg_db, question_id)
+            except Exception as e:
+                print(f"Embedding 索引创建失败: {e}")
         
-        background_tasks.add_task(index_in_background, q.id)
+        import asyncio
+        asyncio.create_task(index_in_background(q.id))
         
         return QuestionCreateResponse(id=q.id, created=True, payload=payload)
     except Exception:
