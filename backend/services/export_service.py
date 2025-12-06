@@ -376,42 +376,87 @@ class ExportService:
         include_answer: bool = True,
         include_explanation: bool = True,
     ) -> Tuple[str, List[Tuple[str, bytes]]]:
-        header = r"""\documentclass[12pt]{ctexart}
-\usepackage[UTF8,fontset=none]{ctex}
+        """
+        生成高考卷风格的 LaTeX，参照 2025juan1.tex 模板
+        """
+        # 高考卷标准 LaTeX Header
+        header = r"""\documentclass[no-math]{ctexart}
 \setCJKmainfont{Noto Serif CJK SC}
 \setCJKsansfont{Noto Sans CJK SC}
 \setCJKmonofont{Noto Sans Mono CJK SC}
+\everymath{\displaystyle}
+
 \usepackage{amsmath,amssymb}
-\usepackage{geometry,graphicx,enumitem,tikz,fancyhdr}
-\usepackage[bodytextleadingratio=1.67,restoremathleading=true]{zhlineskip}
-\geometry{paperheight=26cm,paperwidth=18.4cm,left=2cm,right=2cm,top=1.5cm,bottom=2cm,headsep=10pt}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,patterns,calc}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\setenumerate{itemsep=0pt,partopsep=0pt,parsep=\parskip,topsep=0pt}
+
+\usepackage[paperheight=26cm,paperwidth=18.4cm,left=2cm,right=2cm,top=1.5cm,bottom=2cm,headsep=10pt]{geometry}
+\usepackage{fancyhdr}
 \pagestyle{fancy}
 \renewcommand{\headrulewidth}{0pt}
-\setlength{\parskip}{0.6em}
-\setlength{\parindent}{0pt}
-\newcommand{\choicefour}[4]{%%
-  \begin{tabular}{p{0.45\textwidth}p{0.45\textwidth}}
-  \textsf{A}.~#1 & \textsf{B}.~#2\\
-  \textsf{C}.~#3 & \textsf{D}.~#4
-  \end{tabular}
+\usepackage{lastpage}
+\usepackage[bodytextleadingratio=1.67,restoremathleading=true]{zhlineskip}
+\usepackage{ifthen}
+
+%% 选项自适应排版命令
+\newcommand{\onech}[4]{\makebox[3.4cm][l]{{\sf A}．#1}\makebox[3.4cm][l]{{\sf B}．#2}\makebox[3.4cm][l]{{\sf C}．#3}\makebox[3.4cm][l]{{\sf D}．#4}}
+\newcommand{\twoch}[4]{\makebox[6.8cm][l]{{\sf A}．#1}\makebox[6.8cm][l]{{\sf B}．#2}\\ \makebox[6.8cm][l]{{\sf C}．#3}\makebox[6.8cm][l]{{\sf D}．#4}}
+\newcommand{\fourch}[4]{{\sf A}．#1\\ {\sf B}．#2\\ {\sf C}．#3\\ {\sf D}．#4}
+
+\newlength\widthcha
+\newlength\widthchb
+\newlength\widthch
+\newlength\fourthtabwidth
+\setlength\fourthtabwidth{0.22\textwidth}
+\newlength\halftabwidth
+\setlength\halftabwidth{0.45\textwidth}
+
+\newcommand{\choice}[4]{%%
+  \settowidth\widthcha{{\sf A}M.#1}%%
+  \setlength{\widthch}{\widthcha}%%
+  \settowidth\widthchb{{\sf B}M.#2}%%
+  \ifthenelse{\lengthtest{\widthch < \widthchb}}{\setlength{\widthch}{\widthchb}}{}%%
+  \settowidth\widthchb{{\sf C}M.#3}%%
+  \ifthenelse{\lengthtest{\widthch < \widthchb}}{\setlength{\widthch}{\widthchb}}{}%%
+  \settowidth\widthchb{{\sf D}M.#4}%%
+  \ifthenelse{\lengthtest{\widthch < \widthchb}}{\setlength{\widthch}{\widthchb}}{}%%
+  \ifthenelse{\lengthtest{\widthch < \fourthtabwidth}}{\onech{#1}{#2}{#3}{#4}}%%
+  {\ifthenelse{\lengthtest{\widthch < \halftabwidth}}{\twoch{#1}{#2}{#3}{#4}}%%
+  {\fourch{#1}{#2}{#3}{#4}}}%%
 }
+
+%% 填空横线
+\newcommand{\undsp}{\underline{\hspace{3em}}}
+
 \begin{document}
+\SetMathEnvironmentSinglespace{1}
+\lineskiplimit=5.5pt
+\lineskip=7pt
+\abovedisplayshortskip=5pt
+\belowdisplayshortskip=5pt
+\abovedisplayskip=5pt
+\belowdisplayskip=5pt
+
+\fancyfoot[C]{\bf\sf 数学试题 第{\sf\thepage} 页 （共~{\sf\pageref{LastPage}}~页）}
+
 \begin{center}
-\Large %s
+\zihao{2}\heiti %s
 \end{center}
-\vspace{0.5em}
 """ % self._escape_latex(paper.title)
 
         body_parts = []
         attachments: List[Tuple[str, bytes]] = []
         
-        # 按题型分组
+        # 按题型分组（高考卷结构：单选、多选、填空、解答）
         SECTION_ORDER = ['choice_single', 'choice_multi', 'fill', 'solve']
-        SECTION_NAMES = {
-            'choice_single': '一、选择题',
-            'choice_multi': '二、多项选择题',
-            'fill': '二、填空题',
-            'solve': '三、解答题',
+        SECTION_INFO = {
+            'choice_single': {'name': '一', 'title': '选择题：本题共 %d 小题，每小题 %d 分，共 %d 分。在每小题给出的四个选项中，只有一项是符合题目要求的。'},
+            'choice_multi': {'name': '二', 'title': '选择题：本题共 %d 小题，每小题 %d 分，共 %d 分。在每小题给出的选项中，有多项符合题目要求。'},
+            'fill': {'name': '三', 'title': '填空题：本题共 %d 小题，每小题 %d 分，共 %d 分。'},
+            'solve': {'name': '四', 'title': '解答题：本题共 %d 小题，共 %d 分。解答应写出文字说明、证明过程或演算步骤。'},
         }
         
         # 收集题目按类型分组
@@ -421,77 +466,102 @@ class ExportService:
             if not q:
                 continue
             qtype = q.question_type or 'solve'
-            if qtype.startswith('choice'):
+            # 归类题型
+            if qtype in ('choice', 'choice_single'):
                 qtype = 'choice_single'
+            elif qtype in ('multi', 'choice_multi'):
+                qtype = 'choice_multi'
+            elif qtype in ('fillblank', 'fill'):
+                qtype = 'fill'
+            else:
+                qtype = 'solve'
             if qtype not in questions_by_type:
                 questions_by_type[qtype] = []
             questions_by_type[qtype].append((pq, q))
         
-        # 判断是否只有一种题型
-        has_multiple_types = len(questions_by_type) > 1
-        
-        # 按顺序输出各类型题目
+        # 动态调整章节编号
+        section_number = 0
         question_number = 0
+        
         for section_type in SECTION_ORDER:
             if section_type not in questions_by_type:
                 continue
             
+            section_number += 1
+            section_questions = questions_by_type[section_type]
+            section_count = len(section_questions)
+            section_scores = [pq.score for pq, _ in section_questions]
+            total_score = sum(section_scores)
+            avg_score = section_scores[0] if section_scores else 5
+            
             section_content = []
             
-            # 添加章节标题（如果有多种题型）
-            if has_multiple_types:
-                section_name = SECTION_NAMES.get(section_type, section_type)
-                section_content.append(r"\vspace{1em}")
-                section_content.append(r"\noindent\textbf{%s}" % section_name)
-                section_content.append(r"\vspace{0.5em}")
+            # 章节标题
+            info = SECTION_INFO.get(section_type, SECTION_INFO['solve'])
+            section_names = ['一', '二', '三', '四', '五']
+            sec_name = section_names[section_number - 1] if section_number <= 5 else str(section_number)
             
-            # 开始这个章节的 enumerate
-            section_content.append(r"\begin{enumerate}[leftmargin=0em,label=\arabic*.,itemsep=1em,start=%d]" % (question_number + 1))
+            if section_type == 'solve':
+                title = info['title'] % (section_count, total_score)
+            else:
+                title = info['title'] % (section_count, avg_score, total_score)
             
-            for pq, q in questions_by_type[section_type]:
+            section_content.append(r"\begin{enumerate}[align=left,labelindent=0em,labelwidth=2em,labelsep=0em,leftmargin=2em]")
+            section_content.append(r"\item[{\bf %s、}]{\bf\sf %s}" % (sec_name, title))
+            section_content.append(r"\end{enumerate}")
+            
+            # 题目列表
+            section_content.append(r"\begin{enumerate}[align=left,labelindent=0em,label={\bf\sf\arabic*.},labelwidth=1.5em,labelsep=0em,leftmargin=1.5em,start=%d]" % (question_number + 1))
+            
+            for pq, q in section_questions:
                 question_number += 1
                 try:
-                    item = []
-                    item.append(f"\\item ({pq.score}分) {self._escape_latex(q.question_text)}")
-                    # 选项渲染
-                    if q.options and len(q.options) == 4 and (q.question_type or "").startswith("choice"):
-                        a, b, c, d = q.options
-                        item.append("\n" + r"\choicefour{%s}{%s}{%s}{%s}" % (
-                            self._escape_latex(a),
-                            self._escape_latex(b),
-                            self._escape_latex(c),
-                            self._escape_latex(d),
-                        ) + "\n")
+                    item_parts = []
+                    
+                    # 题干
+                    escaped_text = self._escape_latex(q.question_text)
+                    item_parts.append(r"\item " + escaped_text)
+                    
+                    # 选项（选择题）
+                    if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
+                        a, b, c, d = [self._escape_latex(opt) for opt in q.options]
+                        item_parts.append(r"\\" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
                     elif q.options:
-                        item.append(r"\begin{enumerate}[label=\Alph*. ,leftmargin=1.2em,itemsep=0.2em]")
-                        for opt in q.options:
-                            item.append(r"\item %s" % self._escape_latex(opt))
-                        item.append(r"\end{enumerate}")
+                        # 非标准选项数量
+                        item_parts.append(r"\\")
+                        for i, opt in enumerate(q.options):
+                            label = chr(ord('A') + i)
+                            item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(opt)))
+                    
                     # 图形
                     if q.has_geometry and q.geometry_tikz:
-                        item.append("\n" + q.geometry_tikz + "\n")
+                        item_parts.append("\n" + q.geometry_tikz + "\n")
                     elif q.has_geometry and q.geometry_svg:
-                        # 优先尝试转 TikZ
                         tikz_block = self._svg_to_tikz_block(q.geometry_svg)
                         if tikz_block:
-                            item.append("\n" + tikz_block + "\n")
+                            item_parts.append("\n" + tikz_block + "\n")
                         else:
-                            # TikZ 转换失败，尝试 PNG
                             svg_result = self._svg_to_png_attachment(q.geometry_svg)
                             if svg_result:
                                 fname, data = svg_result
                                 attachments.append((fname, data))
-                                item.append(f'\n\\includegraphics[width=0.6\\textwidth]{{{fname}}}\n')
+                                item_parts.append(f'\n\\includegraphics[width=0.5\\textwidth]{{{fname}}}\n')
+                    
+                    # 解答题留白（不含答案时）
+                    if section_type == 'solve' and not include_answer:
+                        item_parts.append("\n" + r"\vspace{10em}")
+                    
+                    # 答案和解析
                     if include_answer and q.answer:
-                        item.append(f"\n\\textbf{{答案：}} {self._escape_latex(q.answer)}")
+                        item_parts.append(f"\n\\textbf{{答案：}} {self._escape_latex(q.answer)}")
                     if include_explanation and q.explanation:
-                        item.append(f"\n\\textbf{{解析：}} {self._escape_latex(q.explanation)}")
-                    section_content.append("\n".join(item))
+                        item_parts.append(f"\n\\textbf{{解析：}} {self._escape_latex(q.explanation)}")
+                    
+                    section_content.append("\n".join(item_parts))
+                    
                 except Exception as e:
-                    # 单题出错不影响整体
-                    section_content.append(f"\\item % 题目生成出错: {str(e)[:50]}")
+                    section_content.append(r"\item % 题目生成出错: " + str(e)[:50])
             
-            # 结束这个章节的 enumerate
             section_content.append(r"\end{enumerate}")
             body_parts.append("\n".join(section_content))
 
