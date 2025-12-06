@@ -338,13 +338,14 @@ class ExportService:
             body_parts.append(r"\par " + self._escape_latex(opt))
 
         if question.get("hasGeometry") and question.get("geometryTikz"):
-            body_parts.append("\n" + question.get("geometryTikz") + "\n")
+            body_parts.append(self._wrap_diagram_block(question.get("geometryTikz")))
         elif question.get("hasGeometry") and question.get("geometrySvg"):
             svg_result = self._svg_to_png_attachment(question.get("geometrySvg"))
             if svg_result:
                 fname, data = svg_result
                 attachments.append((fname, data))
-                body_parts.append(f'\n\\includegraphics[width=0.6\\textwidth]{{{fname}}}\n')
+                img = f'\\includegraphics[width=0.48\\textwidth]{{{fname}}}'
+                body_parts.append(self._wrap_diagram_block(img))
             else:
                 body_parts.append("\n% TODO: embed SVG or convert to TikZ\n")
 
@@ -535,17 +536,18 @@ class ExportService:
                     
                     # 图形
                     if q.has_geometry and q.geometry_tikz:
-                        item_parts.append("\n" + q.geometry_tikz + "\n")
+                        item_parts.append(self._wrap_diagram_block(q.geometry_tikz))
                     elif q.has_geometry and q.geometry_svg:
                         tikz_block = self._svg_to_tikz_block(q.geometry_svg)
                         if tikz_block:
-                            item_parts.append("\n" + tikz_block + "\n")
+                            item_parts.append(self._wrap_diagram_block(tikz_block))
                         else:
                             svg_result = self._svg_to_png_attachment(q.geometry_svg)
                             if svg_result:
                                 fname, data = svg_result
                                 attachments.append((fname, data))
-                                item_parts.append(f'\n\\includegraphics[width=0.5\\textwidth]{{{fname}}}\n')
+                                img = f'\\includegraphics[width=0.48\\textwidth]{{{fname}}}'
+                                item_parts.append(self._wrap_diagram_block(img))
                     
                     # 解答题留白（不含答案时）
                     if section_type == 'solve' and not include_answer:
@@ -776,13 +778,7 @@ class ExportService:
         if not cmds:
             return None
         # 高考卷风格：居中、适当缩放、细线条
-        tikz = [
-            "\\begin{center}",
-            "\\begin{tikzpicture}[>=Stealth, scale=0.8, line width=0.5pt]",
-            *cmds,
-            "\\end{tikzpicture}",
-            "\\end{center}"
-        ]
+        tikz = ["\\begin{tikzpicture}[>=Stealth, scale=0.8, line width=0.5pt]", *cmds, "\\end{tikzpicture}"]
         return "\n".join(tikz)
 
     def svg_to_png_base64(self, svg_content: str) -> str | None:
@@ -797,6 +793,18 @@ class ExportService:
         except Exception:
             return None
 
+    def _wrap_diagram_block(self, content: str) -> str:
+        """
+        将图形包裹在 minipage 中，默认居右，避免占满版心。
+        """
+        if not content:
+            return ""
+        return (
+            "\n\\par\\noindent\\hfill\\begin{minipage}{0.48\\textwidth}\\centering\n"
+            + content
+            + "\n\\end{minipage}\\hfill\\null\n"
+        )
+
     def _clean_markdown(self, text: str) -> str:
         """
         简单去掉常见的 Markdown 标记，保留公式/纯文本。
@@ -810,7 +818,7 @@ class ExportService:
         # 去掉标题符号
         t = re.sub(r"^\\s*#{1,6}\\s*", "", t, flags=re.M)
         # 去掉加粗/斜体标记
-        t = t.replace("**", "").replace("__", "").replace("*", "")
+        t = t.replace("**", "") # 保留 __ 以防误删填空下划线
         # 去掉列表标记
         t = re.sub(r"^\\s*[-+*]\\s+", "", t, flags=re.M)
         return t.strip()
