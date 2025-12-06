@@ -41,12 +41,10 @@ class ExportService:
         基于模板分块生成 LaTeX（简化版，使用 enumerate + 分块标题）
         """
         header = r"""\documentclass[12pt]{ctexart}
-\usepackage[UTF8,fontset=none]{ctex} %% 避免缺少 fandol 字体
+\usepackage[UTF8,fontset=none]{ctex}
 \setCJKmainfont{Noto Serif CJK SC}
 \setCJKsansfont{Noto Sans CJK SC}
 \setCJKmonofont{Noto Sans Mono CJK SC}
-\usepackage{unicode-math}
-\setmathfont{Latin Modern Math}
 \usepackage{amsmath,amssymb}
 \usepackage{geometry,graphicx,enumitem,tikz,fancyhdr}
 \usepackage[bodytextleadingratio=1.67,restoremathleading=true]{zhlineskip}
@@ -55,20 +53,13 @@ class ExportService:
 \renewcommand{\headrulewidth}{0pt}
 \setlength{\parskip}{0.6em}
 \setlength{\parindent}{0pt}
-\providecommand{\SetMathEnvironmentSinglespace}[1]{}
-\newcommand{\choicefour}[4]{%
+\newcommand{\choicefour}[4]{%%
   \begin{tabular}{p{0.45\textwidth}p{0.45\textwidth}}
   \textsf{A}.~#1 & \textsf{B}.~#2\\
   \textsf{C}.~#3 & \textsf{D}.~#4
   \end{tabular}
 }
 \begin{document}
-\SetMathEnvironmentSinglespace{1}
-\lineskiplimit=5.5pt
-\lineskip=7pt
-\abovedisplayshortskip=5pt
-\belowdisplayshortskip=5pt
-\abovedisplayskip=5pt
 \begin{center}\Large %s\end{center}
 """ % self._escape_latex(paper.title)
 
@@ -386,12 +377,10 @@ class ExportService:
         include_explanation: bool = True,
     ) -> Tuple[str, List[Tuple[str, bytes]]]:
         header = r"""\documentclass[12pt]{ctexart}
-\usepackage[UTF8,fontset=none]{ctex} %% 避免缺少 fandol 字体
+\usepackage[UTF8,fontset=none]{ctex}
 \setCJKmainfont{Noto Serif CJK SC}
 \setCJKsansfont{Noto Sans CJK SC}
 \setCJKmonofont{Noto Sans Mono CJK SC}
-\usepackage{unicode-math}
-\setmathfont{Latin Modern Math}
 \usepackage{amsmath,amssymb}
 \usepackage{geometry,graphicx,enumitem,tikz,fancyhdr}
 \usepackage[bodytextleadingratio=1.67,restoremathleading=true]{zhlineskip}
@@ -400,14 +389,13 @@ class ExportService:
 \renewcommand{\headrulewidth}{0pt}
 \setlength{\parskip}{0.6em}
 \setlength{\parindent}{0pt}
-\providecommand{\SetMathEnvironmentSinglespace}[1]{}
+\newcommand{\choicefour}[4]{%%
+  \begin{tabular}{p{0.45\textwidth}p{0.45\textwidth}}
+  \textsf{A}.~#1 & \textsf{B}.~#2\\
+  \textsf{C}.~#3 & \textsf{D}.~#4
+  \end{tabular}
+}
 \begin{document}
-\SetMathEnvironmentSinglespace{1}
-\lineskiplimit=5.5pt
-\lineskip=7pt
-\abovedisplayshortskip=5pt
-\belowdisplayshortskip=5pt
-\abovedisplayskip=5pt
 \begin{center}
 \Large %s
 \end{center}
@@ -727,7 +715,12 @@ class ExportService:
     def _escape_text_only(self, text: str) -> str:
         """
         仅转义普通文本中的特殊字符（不在数学环境中）。
+        连续下划线（____）作为填空横线处理。
         """
+        import re
+        # 先将连续下划线替换为 LaTeX 填空横线
+        text = re.sub(r'_{2,}', r'\\underline{\\hspace{2em}}', text)
+        
         replacements = {
             "&": r"\&",
             "%": r"\%",
@@ -739,6 +732,14 @@ class ExportService:
             "^": r"\^{}",
         }
         out = []
-        for ch in text:
-            out.append(replacements.get(ch, ch))
+        i = 0
+        while i < len(text):
+            # 检查是否是转义序列（已经处理过的 \underline 等）
+            if text[i] == '\\' and i + 1 < len(text):
+                # 保留反斜杠及后续字符
+                out.append(text[i])
+                i += 1
+                continue
+            out.append(replacements.get(text[i], text[i]))
+            i += 1
         return "".join(out)
