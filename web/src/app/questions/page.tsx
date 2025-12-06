@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Search, Filter, RefreshCw, Trash2 } from 'lucide-react';
+import { Search, Filter, RefreshCw, Trash2, Eye } from 'lucide-react';
 import { questionApi } from '@/lib/api-client';
 import { MathText } from '@/components/ui/MathText';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -267,14 +267,25 @@ export default function QuestionsPage() {
                                             </span>
                                         )}
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleDelete(q.id)}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
+                                    <div className="flex gap-1">
+                                        <Link href={`/questions/${q.id}`}>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </Button>
+                                        </Link>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => { e.stopPropagation(); handleDelete(q.id); }}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 <div className="prose prose-sm max-w-none mb-4 text-foreground/90">

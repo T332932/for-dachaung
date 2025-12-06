@@ -6,7 +6,7 @@ import { paperApi } from '@/lib/api-client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Download, FileDown, List, Plus } from 'lucide-react';
+import { Download, FileDown, List, Plus, Trash2 } from 'lucide-react';
 
 interface Paper {
   id: string;
@@ -57,6 +57,16 @@ export default function PapersPage() {
       alert(err?.userMessage || '导出失败');
     } finally {
       setExportingId(null);
+    }
+  };
+
+  const handleDelete = async (paperId: string) => {
+    if (!confirm('确定要删除这份试卷吗？此操作不可撤销。')) return;
+    try {
+      await paperApi.delete(paperId);
+      setPapers(prev => prev.filter(p => p.id !== paperId));
+    } catch (err: any) {
+      alert(err?.userMessage || '删除失败');
     }
   };
 
@@ -121,6 +131,14 @@ export default function PapersPage() {
                     >
                       <FileDown className="w-4 h-4" />
                       Word
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(paper.id)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>

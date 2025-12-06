@@ -633,3 +633,32 @@ async def list_papers(
             )
         )
     return PaperListResponse(total=total, items=items)
+
+
+@router.delete("/papers/{paper_id}")
+async def delete_paper(
+    paper_id: str,
+    db: Session = Depends(get_db),
+    current_user: orm.User = Depends(require_role(["teacher", "admin"])),
+):
+    """
+    删除试卷。只能删除自己创建的试卷。
+    """
+    paper = db.query(orm.Paper).filter(orm.Paper.id == paper_id).first()
+    if not paper:
+        raise HTTPException(status_code=404, detail="paper not found")
+    
+    # 权限检查：只能删除自己的试卷
+    if paper.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="无权限删除此试卷")
+    
+    try:
+        # 删除关联的 PaperQuestion
+        db.query(orm.PaperQuestion).filter(orm.PaperQuestion.paper_id == paper_id).delete()
+        db.delete(paper)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    
+    return {"success": True, "message": "试卷已删除"}

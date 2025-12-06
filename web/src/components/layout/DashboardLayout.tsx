@@ -12,7 +12,8 @@ import {
     X,
     User,
     PlusCircle,
-    Upload
+    Upload,
+    Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/lib/api-client';
@@ -48,6 +49,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { href: '/batch', label: '批量上传', icon: <Upload className="w-5 h-5" /> },
         { href: '/questions', label: '题库浏览', icon: <BookOpen className="w-5 h-5" /> },
         { href: '/papers', label: '我的试卷', icon: <FileText className="w-5 h-5" /> },
+        { href: '/settings', label: '个人设置', icon: <Settings className="w-5 h-5" /> },
     ];
 
     return (
