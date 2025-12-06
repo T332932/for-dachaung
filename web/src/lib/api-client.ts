@@ -322,9 +322,12 @@ export const questionApi = {
     return response.data;
   },
 
-  // 语义搜索（后端未实现）
-  search: async (_query: string, _topK: number = 5) => {
-    throw new Error('Semantic search not implemented');
+  // 语义搜索
+  search: async (query: string, topK: number = 5) => {
+    const response = await api.get('/api/teacher/questions/search', {
+      params: { query, topK }
+    });
+    return response.data;
   },
 
   // 获取题目详情
