@@ -255,7 +255,7 @@ export const questionApi = {
   },
 
   // 获取题目列表
-  list: async (params?: { page?: number; limit?: number; search?: string; includePublic?: boolean }) => {
+  list: async (params?: { page?: number; limit?: number; search?: string; includePublic?: boolean; difficulty?: string; question_type?: string }) => {
     const response = await api.get('/api/teacher/questions', { params });
     return response.data as { total: number; items: any[] };
   },
