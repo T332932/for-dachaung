@@ -1097,6 +1097,7 @@ class ExportService:
     def _clean_markdown(self, text: str) -> str:
         """
         简单去掉常见的 Markdown 标记，保留公式/纯文本。
+        同时统一全角标点为半角（保持括号样式一致）。
         """
         if not text:
             return ""
@@ -1109,6 +1110,22 @@ class ExportService:
         t = t.replace("**", "") # 保留 __ 以防误删填空下划线
         # 去掉列表标记
         t = re.sub(r"^\\s*[-+*]\\s+", "", t, flags=re.M)
+        
+        # 统一全角标点为半角（保持括号/逗号/冒号等样式一致）
+        fullwidth_to_halfwidth = {
+            "（": "(",
+            "）": ")",
+            "，": ", ",  # 全角逗号转半角并加空格
+            "：": ": ",  # 全角冒号转半角并加空格  
+            "；": "; ",  # 全角分号转半角并加空格
+            "？": "?",
+            "！": "!",
+            "．": ".",
+            "　": " ",   # 全角空格转半角
+        }
+        for fw, hw in fullwidth_to_halfwidth.items():
+            t = t.replace(fw, hw)
+        
         return t.strip()
 
     def _escape_latex(self, text: str) -> str:
