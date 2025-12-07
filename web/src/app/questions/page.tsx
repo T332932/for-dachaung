@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Search, Filter, RefreshCw, Eye } from 'lucide-react';
+import { Search, Filter, RefreshCw, Eye, Download } from 'lucide-react';
 import { questionApi } from '@/lib/api-client';
 import { MathText } from '@/components/ui/MathText';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -75,6 +75,26 @@ export default function QuestionsPage() {
     const typeLabel = (t: string) => {
         const map: Record<string, string> = { choice: '选择题', fillblank: '填空题', solve: '解答题', proof: '证明题', multi: '多选题' };
         return map[t] || t;
+    };
+
+    // 导出题目 JSON
+    const exportQuestionJson = async (questionId: string) => {
+        try {
+            const question = await questionApi.get(questionId);
+            const jsonStr = JSON.stringify(question, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `question_${questionId.slice(0, 8)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('Failed to export question:', error);
+            alert('导出失败');
+        }
     };
 
     return (
@@ -231,15 +251,26 @@ export default function QuestionsPage() {
                                             {typeLabel(q.questionType)}
                                         </span>
                                     </div>
-                                    <Link href={`/questions/${q.id}`}>
+                                    <div className="flex gap-1">
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => exportQuestionJson(q.id)}
+                                            title="导出 JSON"
                                         >
-                                            <Eye className="w-4 h-4" />
+                                            <Download className="w-4 h-4" />
                                         </Button>
-                                    </Link>
+                                        <Link href={`/questions/${q.id}`}>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </Button>
+                                        </Link>
+                                    </div>
                                 </div>
 
                                 <div className="prose prose-sm max-w-none mb-4 text-foreground/90">
