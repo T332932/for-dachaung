@@ -1214,5 +1214,5 @@ class ExportService:
         for k, v in replacements.items():
             text = text.replace(k, v)
         # 将惯用的 // 视为平行符号，避免 URL 误替换：排除前面有冒号或反斜杠的情况
-        text = re.sub(r"(?<!:)(?<!\\)//", r"\parallel ", text)
+        text = re.sub(r"(?<!:)(?<!\\)//", r"\\parallel ", text)
         return text
