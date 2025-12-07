@@ -804,6 +804,13 @@ class ExportService:
                         tikz_block = re.sub(r',\s*,', ',', tikz_block)
                         tikz_block = re.sub(r',\s*\]', ']', tikz_block)
                         
+                        # 修复颜色名称：xcolor 默认不含 grey，需替换为 gray
+                        tikz_block = tikz_block.replace('=grey', '=gray')
+                        tikz_block = tikz_block.replace('{grey}', '{gray}')
+                        # 修复十六进制颜色名（如 caaaaaa）为 black
+                        tikz_block = re.sub(r'=c[0-9a-f]{6}', '=black', tikz_block)
+                        tikz_block = re.sub(r'\{c[0-9a-f]{6}\}', '{black}', tikz_block)
+                        
                         # 添加高考卷风格设置 - 注意 svg2tikz 可能已有选项
                         our_options = '>=Stealth, scale=0.8, line width=0.5pt'
                         if r'\begin{tikzpicture}[' in tikz_block:
