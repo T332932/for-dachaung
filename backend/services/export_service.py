@@ -1228,10 +1228,11 @@ class ExportService:
         for k, v in replacements.items():
             text = text.replace(k, v)
         # 三角函数转为 LaTeX 命令（仅替换独立的函数名，避免误替换变量名）
+        # 使用 negative lookbehind (?<!\\) 确保前面没有反斜杠，避免 \sin 变成 \\sin
         trig_funcs = ["sin", "cos", "tan", "cot", "sec", "csc", "arcsin", "arccos", "arctan", "ln", "log", "exp"]
         for fn in trig_funcs:
-            # 匹配单词边界，避免替换 asin -> a\sin
-            text = re.sub(rf"\b{fn}\b", rf"\\{fn}", text)
+            # 匹配单词边界，且前面不能有反斜杠（避免重复转义）
+            text = re.sub(rf"(?<!\\)\b{fn}\b", rf"\\{fn}", text)
         # 将惯用的 // 视为平行符号，避免 URL 误替换：排除前面有冒号或反斜杠的情况
         text = re.sub(r"(?<!:)(?<!\\)//", r"\\parallel ", text)
         return text
