@@ -110,7 +110,8 @@ class ExportService:
                     if tikz_block:
                         item_lines.append(self._wrap_diagram_block(tikz_block))
                     else:
-                        svg_result = self._svg_to_png_attachment(q.geometry_svg)
+                        # TikZ 失败，fallback 到 PDF（矢量格式）
+                        svg_result = self._svg_to_pdf_attachment(q.geometry_svg)
                         if svg_result:
                             fname, data = svg_result
                             attachments.append((fname, data))
@@ -341,14 +342,19 @@ class ExportService:
         if question.get("hasGeometry") and question.get("geometryTikz"):
             body_parts.append(self._wrap_diagram_block(question.get("geometryTikz")))
         elif question.get("hasGeometry") and question.get("geometrySvg"):
-            svg_result = self._svg_to_png_attachment(question.get("geometrySvg"))
-            if svg_result:
-                fname, data = svg_result
-                attachments.append((fname, data))
-                img = f'\\includegraphics[width=0.48\\textwidth]{{{fname}}}'
-                body_parts.append(self._wrap_diagram_block(img))
+            # 优先尝试 TikZ，失败则用 PDF
+            tikz_block = self._svg_to_tikz_block(question.get("geometrySvg"))
+            if tikz_block:
+                body_parts.append(self._wrap_diagram_block(tikz_block))
             else:
-                body_parts.append("\n% TODO: embed SVG or convert to TikZ\n")
+                svg_result = self._svg_to_pdf_attachment(question.get("geometrySvg"))
+                if svg_result:
+                    fname, data = svg_result
+                    attachments.append((fname, data))
+                    img = f'\\includegraphics[width=0.48\\textwidth]{{{fname}}}'
+                    body_parts.append(self._wrap_diagram_block(img))
+                else:
+                    body_parts.append("\n% SVG 转换失败，未插入图形\n")
 
         if include_answer and question.get("answer"):
             body_parts.append(f"\n\\textbf{{答案：}} {self._escape_latex(question.get('answer') or '')}")
@@ -543,7 +549,8 @@ class ExportService:
                         if tikz_block:
                             item_parts.append(self._wrap_diagram_block(tikz_block))
                         else:
-                            svg_result = self._svg_to_png_attachment(q.geometry_svg)
+                            # TikZ 失败，fallback 到 PDF（矢量格式）
+                            svg_result = self._svg_to_pdf_attachment(q.geometry_svg)
                             if svg_result:
                                 fname, data = svg_result
                                 attachments.append((fname, data))
@@ -685,6 +692,22 @@ class ExportService:
             png_bytes = cairosvg.svg2png(bytestring=svg_content.encode("utf-8"))
             fname = f"svg_{uuid.uuid4().hex}.png"
             return fname, png_bytes
+        except Exception:
+            return None
+
+    def _svg_to_pdf_attachment(self, svg_content: str) -> tuple[str, bytes] | None:
+        """
+        将 SVG 转 PDF（矢量格式），用于 LaTeX includegraphics。
+        相比 PNG：文件更小，矢量缩放不失真。
+        """
+        if not svg_content:
+            return None
+        if cairosvg is None:  # pragma: no cover - optional dependency not installed
+            return None
+        try:
+            pdf_bytes = cairosvg.svg2pdf(bytestring=svg_content.encode("utf-8"))
+            fname = f"svg_{uuid.uuid4().hex}.pdf"
+            return fname, pdf_bytes
         except Exception:
             return None
 

@@ -155,13 +155,34 @@ class AIService:
 - 答案与解题步骤只放在 answer 字段。
 - questionType 只能是 choice/multi/fillblank/solve/proof 之一，禁止组合值。
 - isHighSchool 为 true 仅限高中数学题；如果不是高中数学或无法判断，请返回 false。
-SVG 生成要求：
- - 使用 <line>, <circle>, <ellipse>, <path>, <text> 标签
- - 虚线用 stroke-dasharray="5,5"
- - 文本标注用 <text> 标签，内容为数学符号
- - viewBox="0 0 400 400"，坐标准确
- - 必须是合法 SVG，坐标/属性正确，避免重复属性或拼写错误
- - 符号与图形不要重叠，文字标注与线段/节点保持至少 6-10px 间距，避免遮挡"""
+
+图形处理规则（非常重要）：
+- hasGeometry：如果图片中包含几何图形、函数图像、坐标系等图形，设为 true
+- geometrySvg：必须根据图片中的原始图形精确重绘为 SVG，禁止凭空想象或编造
+- 如果图片中没有图形，hasGeometry 设为 false，geometrySvg 设为 null
+
+SVG 重绘要求：
+1. 精确还原：
+   - 必须忠实还原图片中的图形，包括形状、位置、标注、虚实线等
+   - 坐标、角度、比例要与原图一致
+   - 所有文字标注（如点的名称 A/B/C、坐标值、角度等）必须完整保留
+
+2. 基本规范：
+   - viewBox="0 0 400 300"
+   - 只使用基础标签：<svg>, <line>, <circle>, <ellipse>, <path>, <polyline>, <polygon>, <rect>, <text>
+   - 禁止使用：<defs>, <marker>, <use>, <g>, <clipPath>, <mask> 等高级标签
+   - 虚线用 stroke-dasharray="5,5"
+   - 线条默认 stroke="#000" stroke-width="1.5"
+
+3. 文本标注规则：
+   - <text> 标签内容必须使用 Unicode 数学符号，禁止使用 LaTeX 格式（禁止 $...$）
+   - 分数写法：用斜杠表示，如 "π/6"、"2π/3"、"1/2"
+   - 常用符号：π ω φ θ α β γ（希腊字母）、√（根号）、x₁ x₂（下标）、x² x³（上标）
+   - 示例：<text x="100" y="180">π/6</text>
+
+4. 坐标轴与曲线：
+   - 坐标轴用 <line> 绘制，箭头用三角形 <polygon> 表示
+   - 曲线用 <polyline> 或 <path> 的 L/M 命令绘制"""
         
         # 如果有自定义提示词，用它替换默认说明
         if custom_prompt:
