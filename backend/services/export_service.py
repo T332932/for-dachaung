@@ -564,12 +564,13 @@ class ExportService:
                     
                     # 根据题型和是否有图决定布局
                     if section_type in ('choice_single', 'choice_multi', 'fill') and diagram_content:
-                        # 检测图形高度
-                        diagram_height = self._get_svg_height(q.geometry_svg) if q.geometry_svg else 5.0
-                        is_small_diagram = diagram_height <= 3.0  # 小图：高度 ≤ 3cm
+                        # 检测图形比例：只有矮胖的图才放右侧，高图一律选项独立成行
+                        svg_w, svg_h = self._get_svg_dimensions(q.geometry_svg) if q.geometry_svg else (100, 100)
+                        aspect_ratio = svg_h / svg_w if svg_w > 0 else 1.0
+                        is_wide_diagram = aspect_ratio < 0.8  # 宽图（高度 < 宽度的80%）
                         
-                        if is_small_diagram:
-                            # 小图：题干和图并排，选项在下方独立成行（避免重叠）
+                        if is_wide_diagram:
+                            # 宽图（矮胖）：题干和图并排，选项在下方独立成行（避免重叠）
                             item_parts.append(r"\item")
                             item_parts.append(r"\noindent")
                             item_parts.append(r"\begin{minipage}[t]{0.68\textwidth}")
@@ -591,7 +592,7 @@ class ExportService:
                                     label = chr(ord('A') + i)
                                     item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
                         else:
-                            # 中大图：选项在 minipage 内，图在右侧
+                            # 高图：选项在 minipage 内，图在右侧
                             item_parts.append(r"\item")
                             item_parts.append(r"\begin{minipage}[t]{0.70\textwidth}")
                             item_parts.append(escaped_text)
@@ -781,14 +782,13 @@ class ExportService:
         except Exception:
             return None
 
-    def _get_svg_height(self, svg_content: str) -> float:
+    def _get_svg_dimensions(self, svg_content: str) -> tuple[float, float]:
         """
-        从 SVG 获取高度（基于 viewBox 或 height 属性）。
-        返回高度估计值（cm），用于判断图形大小。
-        svg2tikz 会按一定比例转换坐标，这里返回原始 viewBox 高度的估算。
+        从 SVG 获取尺寸（基于 viewBox 或 width/height 属性）。
+        返回 (width, height) 估计值，用于判断图形比例。
         """
         if not svg_content:
-            return 5.0  # 默认中等
+            return (100.0, 100.0)  # 默认正方形
         try:
             root = ET.fromstring(svg_content)
             # 优先从 viewBox 获取
@@ -796,15 +796,17 @@ class ExportService:
             if viewBox:
                 parts = viewBox.split()
                 if len(parts) >= 4:
+                    width = float(parts[2]) - float(parts[0])
                     height = float(parts[3]) - float(parts[1])
-                    # svg2tikz 大约按 1/26.46 (mm to cm) 转换
-                    return height / 26.46
-            # 其次从 height 属性获取
+                    return (width, height)
+            # 其次从 width/height 属性获取
+            w = root.get('width', '100')
             h = root.get('height', '100')
+            w = ''.join(c for c in w if c.isdigit() or c == '.')
             h = ''.join(c for c in h if c.isdigit() or c == '.')
-            return float(h) / 26.46 if h else 5.0
+            return (float(w) if w else 100.0, float(h) if h else 100.0)
         except Exception:
-            return 5.0  # 默认中等
+            return (100.0, 100.0)  # 默认正方形
 
     def _svg_to_pdf_attachment(self, svg_content: str) -> tuple[str, bytes] | None:
         """
