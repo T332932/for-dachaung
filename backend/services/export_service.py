@@ -796,9 +796,9 @@ class ExportService:
                         
                         # 清理 svg2tikz 输出中未定义的命令（如 \globalscale）
                         # 移除 yscale=\globalscale, xscale=\globalscale, every node/.append style={scale=\globalscale}
-                        tikz_block = re.sub(r',?\s*yscale=\\\\globalscale', '', tikz_block)
-                        tikz_block = re.sub(r',?\s*xscale=\\\\globalscale', '', tikz_block)
-                        tikz_block = re.sub(r',?\s*every node/\.append style=\{scale=\\\\globalscale\}', '', tikz_block)
+                        tikz_block = re.sub(r',?\s*yscale=\\globalscale', '', tikz_block)
+                        tikz_block = re.sub(r',?\s*xscale=\\globalscale', '', tikz_block)
+                        tikz_block = re.sub(r',?\s*every node/\.append style=\{scale=\\globalscale\}', '', tikz_block)
                         # 清理多余逗号和空格
                         tikz_block = re.sub(r'\[\s*,', '[', tikz_block)
                         tikz_block = re.sub(r',\s*,', ',', tikz_block)
