@@ -564,27 +564,53 @@ class ExportService:
                     
                     # 根据题型和是否有图决定布局
                     if section_type in ('choice_single', 'choice_multi', 'fill') and diagram_content:
-                        # 选填题有图：题干和图并排，选项在下方独立成行（高考真卷风格）
-                        item_parts.append(r"\item")
-                        item_parts.append(r"\noindent")
-                        item_parts.append(r"\begin{minipage}[t]{0.68\textwidth}")
-                        item_parts.append(escaped_text)
-                        item_parts.append(r"\end{minipage}%")
-                        item_parts.append(r"\hfill")
-                        item_parts.append(r"\begin{minipage}[t]{0.28\textwidth}")
-                        item_parts.append(r"\raggedleft")
-                        item_parts.append(diagram_content)
-                        item_parts.append(r"\end{minipage}")
+                        # 检测图形高度
+                        diagram_height = self._get_svg_height(q.geometry_svg) if q.geometry_svg else 5.0
+                        is_small_diagram = diagram_height <= 3.0  # 小图：高度 ≤ 3cm
                         
-                        # 选项放在 minipage 外面，独立成行，不会与图重叠
-                        if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
-                            a, b, c, d = [self._escape_latex(self._strip_option_prefix(opt)) for opt in q.options]
-                            item_parts.append("\n" + r"\par\noindent" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
-                        elif q.options:
-                            item_parts.append("\n" + r"\par\noindent")
-                            for i, opt in enumerate(q.options):
-                                label = chr(ord('A') + i)
-                                item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
+                        if is_small_diagram:
+                            # 小图：题干和图并排，选项在下方独立成行（避免重叠）
+                            item_parts.append(r"\item")
+                            item_parts.append(r"\noindent")
+                            item_parts.append(r"\begin{minipage}[t]{0.68\textwidth}")
+                            item_parts.append(escaped_text)
+                            item_parts.append(r"\end{minipage}%")
+                            item_parts.append(r"\hfill")
+                            item_parts.append(r"\begin{minipage}[t]{0.28\textwidth}")
+                            item_parts.append(r"\raggedleft")
+                            item_parts.append(diagram_content)
+                            item_parts.append(r"\end{minipage}")
+                            
+                            # 选项放在 minipage 外面，独立成行
+                            if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
+                                a, b, c, d = [self._escape_latex(self._strip_option_prefix(opt)) for opt in q.options]
+                                item_parts.append("\n" + r"\par\noindent" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
+                            elif q.options:
+                                item_parts.append("\n" + r"\par\noindent")
+                                for i, opt in enumerate(q.options):
+                                    label = chr(ord('A') + i)
+                                    item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
+                        else:
+                            # 中大图：选项在 minipage 内，图在右侧
+                            item_parts.append(r"\item")
+                            item_parts.append(r"\begin{minipage}[t]{0.70\textwidth}")
+                            item_parts.append(escaped_text)
+                            
+                            # 选项在 minipage 内
+                            if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
+                                a, b, c, d = [self._escape_latex(self._strip_option_prefix(opt)) for opt in q.options]
+                                item_parts.append("\n" + r"\par\noindent" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
+                            elif q.options:
+                                item_parts.append("\n" + r"\par\noindent")
+                                for i, opt in enumerate(q.options):
+                                    label = chr(ord('A') + i)
+                                    item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
+                            
+                            item_parts.append(r"\end{minipage}%")
+                            item_parts.append(r"\begin{minipage}[t]{0.28\textwidth}")
+                            item_parts.append(r"\raggedleft")
+                            item_parts.append(diagram_content)
+                            item_parts.append(r"\end{minipage}")
                     else:
                         # 无图或解答题：正常布局
                         item_parts.append(r"\item " + escaped_text)
@@ -754,6 +780,31 @@ class ExportService:
             return fname, png_bytes
         except Exception:
             return None
+
+    def _get_svg_height(self, svg_content: str) -> float:
+        """
+        从 SVG 获取高度（基于 viewBox 或 height 属性）。
+        返回高度估计值（cm），用于判断图形大小。
+        svg2tikz 会按一定比例转换坐标，这里返回原始 viewBox 高度的估算。
+        """
+        if not svg_content:
+            return 5.0  # 默认中等
+        try:
+            root = ET.fromstring(svg_content)
+            # 优先从 viewBox 获取
+            viewBox = root.get('viewBox')
+            if viewBox:
+                parts = viewBox.split()
+                if len(parts) >= 4:
+                    height = float(parts[3]) - float(parts[1])
+                    # svg2tikz 大约按 1/26.46 (mm to cm) 转换
+                    return height / 26.46
+            # 其次从 height 属性获取
+            h = root.get('height', '100')
+            h = ''.join(c for c in h if c.isdigit() or c == '.')
+            return float(h) / 26.46 if h else 5.0
+        except Exception:
+            return 5.0  # 默认中等
 
     def _svg_to_pdf_attachment(self, svg_content: str) -> tuple[str, bytes] | None:
         """
