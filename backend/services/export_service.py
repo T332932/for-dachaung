@@ -570,16 +570,16 @@ class ExportService:
                     
                     # 根据题型决定图形布局
                     if section_type == 'solve':
-                        # 解答题：图在留白左侧（左图右留白）
+                        # 解答题：图在留白左侧（左图右留白，等高对齐）
                         if diagram_content and not include_answer:
                             item_parts.append("\n" + r"\par\noindent")
-                            item_parts.append(r"\begin{minipage}[t]{0.45\textwidth}")
+                            item_parts.append(r"\begin{minipage}[c]{0.48\textwidth}")
                             item_parts.append(r"\centering")
                             item_parts.append(diagram_content)
                             item_parts.append(r"\end{minipage}")
                             item_parts.append(r"\hfill")
-                            item_parts.append(r"\begin{minipage}[t]{0.5\textwidth}")
-                            item_parts.append(r"\vspace{8em}")  # 留白区域
+                            item_parts.append(r"\begin{minipage}[c]{0.48\textwidth}")
+                            item_parts.append(r"\rule{0pt}{1pt}")  # 占位，让两边等高
                             item_parts.append(r"\end{minipage}")
                         elif diagram_content:
                             # 有答案时，图片正常显示
@@ -588,9 +588,12 @@ class ExportService:
                             # 没有图但需要留白
                             item_parts.append("\n" + r"\vspace{6em}")
                     else:
-                        # 选填题：图在题干右侧（右对齐悬挂）
+                        # 选填题：题干和图并排（图在右侧，和题干等高）
                         if diagram_content:
-                            item_parts.append(self._wrap_diagram_block(diagram_content))
+                            # 用 hfill + 右对齐 minipage 实现图在右侧
+                            item_parts.append("\n" + r"\par\noindent\hfill\begin{minipage}{0.45\textwidth}\centering")
+                            item_parts.append(diagram_content)
+                            item_parts.append(r"\end{minipage}\hfill\null")
                     
                     # 答案和解析
                     if include_answer and q.answer:
