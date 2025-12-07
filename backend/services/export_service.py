@@ -5,6 +5,7 @@ import tempfile
 import uuid
 from pathlib import Path
 from typing import List, Mapping, Tuple
+import re
 import xml.etree.ElementTree as ET
 
 from models import orm
@@ -90,7 +91,7 @@ class ExportService:
                 item_lines.append(r"\item (%s分) %s" % (pq.score or slot["score"], self._escape_latex(q.question_text)))
                 # 选项
                 if q.options and len(q.options) == 4 and (q.question_type or "").startswith("choice"):
-                    a, b, c, d = q.options
+                    a, b, c, d = [self._strip_option_prefix(opt) for opt in q.options]
                     item_lines.append(r"\choicefour{%s}{%s}{%s}{%s}" % (
                         self._escape_latex(a),
                         self._escape_latex(b),
@@ -100,7 +101,7 @@ class ExportService:
                 elif q.options:
                     item_lines.append(r"\begin{enumerate}[label=\Alph*. ,leftmargin=1.2em,itemsep=0.2em]")
                     for opt in q.options:
-                        item_lines.append(r"\item %s" % self._escape_latex(opt))
+                        item_lines.append(r"\item %s" % self._escape_latex(self._strip_option_prefix(opt)))
                     item_lines.append(r"\end{enumerate}")
                 # 图形
                 if q.has_geometry and q.geometry_tikz:
@@ -532,14 +533,14 @@ class ExportService:
                     
                     # 选项（选择题）
                     if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
-                        a, b, c, d = [self._escape_latex(opt) for opt in q.options]
+                        a, b, c, d = [self._escape_latex(self._strip_option_prefix(opt)) for opt in q.options]
                         item_parts.append(r"\\" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
                     elif q.options:
                         # 非标准选项数量
                         item_parts.append(r"\\")
                         for i, opt in enumerate(q.options):
                             label = chr(ord('A') + i)
-                            item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(opt)))
+                            item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
                     
                     # 图形
                     if q.has_geometry and q.geometry_tikz:
@@ -740,6 +741,11 @@ class ExportService:
                 height = float((root.get("height") or "400").replace("px", ""))
             except Exception:
                 pass
+
+        # 收集 defs 内的元素（通常是箭头 marker 等装饰），转换时跳过
+        defs_nodes = set()
+        for defs in root.findall(".//{*}defs"):
+            defs_nodes.update(list(defs.iter()))
 
         cmds: List[str] = []
         scale = 0.03  # 将 400x400 缩放到约 12x12
@@ -994,6 +1000,8 @@ class ExportService:
             return segments
 
         for el in root.iter():
+            if el in defs_nodes:
+                continue  # 跳过 marker/defs 内部的装饰元素
             tag = el.tag.split("}")[-1].lower()
             dashed = "[dashed]" if is_dashed(el) else ""
             if tag == "line":
@@ -1085,7 +1093,6 @@ class ExportService:
         """
         if not text:
             return ""
-        import re
         t = text
         # 去掉代码块
         t = re.sub(r"```.*?```", "", t, flags=re.S)
@@ -1104,11 +1111,10 @@ class ExportService:
         """
         if not text:
             return ""
-        import re
         
         # 先简单清洗 Markdown
         text = self._clean_markdown(text)
-        
+
         # 自动修复未闭合的 $ 符号
         # 计算 $ 数量（排除转义的 \$）
         dollar_count = len(re.findall(r'(?<!\\)\$', text))
@@ -1121,6 +1127,21 @@ class ExportService:
         pattern = r'(\$\$.*?\$\$|\$.*?\$)'
         parts = re.split(pattern, text, flags=re.DOTALL)
         
+        def _normalize_plain(t: str) -> str:
+            # 常见符号/习惯用法替换为 LaTeX 形式（仅在文本环境处理）
+            replacements = {
+                "π": r"$\pi$",
+                "∥": r"$\parallel$",
+                "∞": r"$\infty$",
+                "×": r"$\times$",
+                "÷": r"$\div$",
+                "°": r"$^\circ$",
+            }
+            for k, v in replacements.items():
+                t = t.replace(k, v)
+            t = re.sub(r"\s//\s", r" \\parallel ", t)
+            return t
+        
         result = []
         for i, part in enumerate(parts):
             if part.startswith('$$') or part.startswith('$'):
@@ -1128,7 +1149,8 @@ class ExportService:
                 result.append(part)
             else:
                 # 非数学环境，转义特殊字符
-                escaped = self._escape_text_only(part)
+                normalized = _normalize_plain(part)
+                escaped = self._escape_text_only(normalized)
                 result.append(escaped)
         
         return ''.join(result)
@@ -1138,8 +1160,6 @@ class ExportService:
         仅转义普通文本中的特殊字符（不在数学环境中）。
         连续下划线（____）作为填空横线处理。
         """
-        import re
-        
         # 使用占位符保护填空横线（多种格式）
         BLANK_PLACEHOLDER = "\x00BLANK\x00"
         
@@ -1168,3 +1188,11 @@ class ExportService:
         # 将占位符替换为 LaTeX 填空横线命令
         result = result.replace(BLANK_PLACEHOLDER, r"\undsp ")
         return result
+
+    def _strip_option_prefix(self, text: str) -> str:
+        """
+        去掉选项开头的 A./A．/A、 等前缀，避免与模板宏重复。
+        """
+        if not text:
+            return ""
+        return re.sub(r"^\s*[A-DＡ-Ｄa-d][\.\。．、﹒\)]\s*", "", text).strip()
