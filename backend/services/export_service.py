@@ -762,7 +762,8 @@ class ExportService:
         def parse_path(d: str) -> List[tuple[float, float]]:
             import re
             pts = []
-            parts = re.findall(r'[ML]\s*([-\d.]+)\s+([-\d.]+)', d or "", re.IGNORECASE)
+            # 支持逗号或空格分隔的坐标格式: M 20.00,150.00 或 M 20.00 150.00 或 L 22,143
+            parts = re.findall(r'[ML]\s*([-\d.]+)[,\s]+([-\d.]+)', d or "", re.IGNORECASE)
             for x, y in parts:
                 try:
                     pts.append((float(x), float(y)))
