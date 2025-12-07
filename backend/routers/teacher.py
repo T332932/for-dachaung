@@ -988,6 +988,68 @@ async def list_papers(
     return PaperListResponse(total=total, items=items)
 
 
+@router.put("/papers/{paper_id}")
+async def update_paper(
+    paper_id: str,
+    payload: PaperCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: orm.User = Depends(require_role(["teacher", "admin"])),
+):
+    """
+    更新试卷（标题、描述、时限、题目列表）。只能更新自己创建的试卷。
+    """
+    paper = db.query(orm.Paper).filter(orm.Paper.id == paper_id).first()
+    if not paper:
+        raise HTTPException(status_code=404, detail="paper not found")
+    
+    # 权限检查：只能更新自己的试卷
+    if paper.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="无权限修改此试卷")
+    
+    # 校验题目是否存在
+    qids = [pq.questionId for pq in payload.questions]
+    if not qids:
+        raise HTTPException(status_code=400, detail="questions list cannot be empty")
+    exist_map = {q.id: q for q in db.query(orm.Question).filter(orm.Question.id.in_(qids)).all()}
+    missing = [qid for qid in qids if qid not in exist_map]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"question ids not found: {missing}")
+
+    computed_total = sum(pq.score for pq in payload.questions)
+
+    try:
+        # 更新试卷基本信息
+        paper.title = payload.title
+        paper.description = payload.description
+        paper.template_type = payload.templateType
+        paper.total_score = payload.totalScore or computed_total
+        paper.time_limit = payload.timeLimit
+        paper.tags = payload.tags
+        paper.subject = payload.subject
+        paper.grade_level = payload.gradeLevel
+        
+        # 删除旧的题目关联
+        db.query(orm.PaperQuestion).filter(orm.PaperQuestion.paper_id == paper_id).delete()
+        
+        # 添加新的题目关联
+        for pq in payload.questions:
+            db.add(
+                orm.PaperQuestion(
+                    paper_id=paper.id,
+                    question_id=pq.questionId,
+                    order=pq.order,
+                    score=pq.score,
+                    custom_label=pq.customLabel,
+                )
+            )
+        
+        db.commit()
+        return {"success": True, "message": "试卷已更新", "id": paper.id}
+    except Exception:
+        db.rollback()
+        raise
+
+
 @router.delete("/papers/{paper_id}")
 async def delete_paper(
     paper_id: str,

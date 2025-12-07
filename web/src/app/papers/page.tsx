@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { paperApi } from '@/lib/api-client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Download, FileDown, List, Plus, Trash2 } from 'lucide-react';
+import { Download, Edit, FileDown, List, Plus, Trash2 } from 'lucide-react';
 
 interface Paper {
   id: string;
@@ -18,6 +19,7 @@ interface Paper {
 }
 
 export default function PapersPage() {
+  const router = useRouter();
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loadingPapers, setLoadingPapers] = useState(true);
   const [exportingId, setExportingId] = useState<string | null>(null);
@@ -148,10 +150,10 @@ export default function PapersPage() {
                       onClick={() => handleExport(paper.id, 'docx')}
                       disabled={exportingId === paper.id}
                       className="gap-1"
-                   >
-                     <FileDown className="w-4 h-4" />
-                     Word
-                   </Button>
+                    >
+                      <FileDown className="w-4 h-4" />
+                      Word
+                    </Button>
                     <Button
                       variant="secondary"
                       size="sm"
@@ -160,6 +162,15 @@ export default function PapersPage() {
                       className="gap-1"
                     >
                       📝 答案卷
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push(`/papers/create?edit=${paper.id}`)}
+                      className="gap-1"
+                    >
+                      <Edit className="w-4 h-4" />
+                      编辑
                     </Button>
                     <Button
                       variant="ghost"

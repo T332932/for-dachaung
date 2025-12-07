@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { questionApi, paperApi } from '@/lib/api-client';
 import { MathText } from '@/components/ui/MathText';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -115,8 +115,76 @@ export default function CreatePaperPage() {
     const [draftLoaded, setDraftLoaded] = useState(false);
     const [savingDraft, setSavingDraft] = useState(false);
 
-    // 页面加载时恢复草稿
+    // 编辑模式
+    const searchParams = useSearchParams();
+    const editPaperId = searchParams.get('edit');
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+
+    // 加载要编辑的试卷
     useEffect(() => {
+        if (!editPaperId) return;
+
+        const loadPaperForEdit = async () => {
+            setEditLoading(true);
+            try {
+                // 获取试卷详情
+                const paper = await paperApi.get(editPaperId);
+                setPaperTitle(paper.title || '');
+                setPaperDescription(paper.description || '');
+                setTimeLimit(paper.timeLimit || '');
+                setTemplateId(paper.templateType || 'custom');
+
+                // 加载题目详情
+                if (paper.questions && paper.questions.length > 0) {
+                    const questionIds = paper.questions.map((pq: any) => pq.questionId);
+                    const questionsWithDetails = await Promise.all(
+                        paper.questions.map(async (pq: any) => {
+                            try {
+                                const q = await questionApi.get(pq.questionId);
+                                return {
+                                    id: q.id,
+                                    questionText: q.questionText,
+                                    answer: q.answer,
+                                    difficulty: q.difficulty,
+                                    questionType: q.questionType,
+                                    knowledgePoints: q.knowledgePoints || [],
+                                    score: pq.score,
+                                    order: pq.order,
+                                };
+                            } catch {
+                                return {
+                                    id: pq.questionId,
+                                    questionText: '加载失败',
+                                    answer: '',
+                                    difficulty: 'medium',
+                                    questionType: 'solve',
+                                    knowledgePoints: [],
+                                    score: pq.score,
+                                    order: pq.order,
+                                };
+                            }
+                        })
+                    );
+                    setSelectedQuestions(questionsWithDetails);
+                }
+
+                setIsEditMode(true);
+                setDraftLoaded(true);  // 编辑模式不加载草稿
+            } catch (err) {
+                console.error('加载试卷失败:', err);
+                alert('加载试卷失败');
+            } finally {
+                setEditLoading(false);
+            }
+        };
+        loadPaperForEdit();
+    }, [editPaperId]);
+
+    // 页面加载时恢复草稿（非编辑模式）
+    useEffect(() => {
+        if (editPaperId) return;  // 编辑模式不加载草稿
+
         const loadDraft = async () => {
             try {
                 const draft = await paperApi.getDraft();
@@ -138,11 +206,11 @@ export default function CreatePaperPage() {
             setDraftLoaded(true);
         };
         loadDraft();
-    }, []);
+    }, [editPaperId]);
 
-    // 自动保存草稿（防抖 3 秒）
+    // 自动保存草稿（防抖 3 秒，仅创建模式）
     useEffect(() => {
-        if (!draftLoaded) return;
+        if (!draftLoaded || isEditMode) return;  // 编辑模式不保存草稿
 
         const timer = setTimeout(async () => {
             try {
@@ -167,7 +235,7 @@ export default function CreatePaperPage() {
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [draftLoaded, paperTitle, templateId, timeLimit, selectedQuestions]);
+    }, [draftLoaded, isEditMode, paperTitle, templateId, timeLimit, selectedQuestions]);
 
     // 搜索题目
     const handleSearch = async () => {
@@ -293,7 +361,7 @@ export default function CreatePaperPage() {
     // 计算总分
     const totalScore = selectedQuestions.reduce((sum, q) => sum + q.score, 0);
 
-    // 提交试卷
+    // 提交试卷（创建或更新）
     const handleSubmit = async () => {
         if (!paperTitle.trim()) {
             alert('请输入试卷标题');
@@ -306,7 +374,7 @@ export default function CreatePaperPage() {
 
         setSubmitting(true);
         try {
-            await paperApi.create({
+            const payload = {
                 title: paperTitle,
                 description: paperDescription || undefined,
                 templateType: templateId,
@@ -317,16 +385,25 @@ export default function CreatePaperPage() {
                     order: q.order,
                     score: q.score,
                 })),
-            });
-            alert('试卷创建成功！');
-            // 创建成功后删除草稿
-            try {
-                await paperApi.deleteDraft();
-            } catch { }
+            };
+
+            if (isEditMode && editPaperId) {
+                // 更新模式
+                await paperApi.update(editPaperId, payload);
+                alert('试卷更新成功！');
+            } else {
+                // 创建模式
+                await paperApi.create(payload);
+                alert('试卷创建成功！');
+                // 创建成功后删除草稿
+                try {
+                    await paperApi.deleteDraft();
+                } catch { }
+            }
             router.push('/papers');
         } catch (error: any) {
-            console.error('Failed to create paper:', error);
-            alert(error?.userMessage || '创建失败');
+            console.error('Failed to save paper:', error);
+            alert(error?.userMessage || '保存失败');
         } finally {
             setSubmitting(false);
         }
@@ -342,8 +419,12 @@ export default function CreatePaperPage() {
             <div className="space-y-6 h-[calc(100vh-100px)] flex flex-col">
                 <div className="flex justify-between items-center shrink-0">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-foreground">创建试卷</h1>
-                        <p className="text-muted-foreground">从题库中挑选题目组成试卷</p>
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                            {isEditMode ? '编辑试卷' : '创建试卷'}
+                        </h1>
+                        <p className="text-muted-foreground">
+                            {isEditMode ? '修改试卷内容和题目' : '从题库中挑选题目组成试卷'}
+                        </p>
                     </div>
                     <div className="flex gap-3 items-center">
                         <div className="flex items-center gap-2">
@@ -364,13 +445,13 @@ export default function CreatePaperPage() {
                         </div>
                         <Button
                             onClick={handleSubmit}
-                            disabled={submitting || selectedQuestions.length === 0}
+                            disabled={submitting || selectedQuestions.length === 0 || editLoading}
                             className="gap-2"
                         >
-                            {submitting ? '创建中...' : (
+                            {submitting ? (isEditMode ? '保存中...' : '创建中...') : (
                                 <>
                                     <Save className="w-4 h-4" />
-                                    完成创建
+                                    {isEditMode ? '保存修改' : '完成创建'}
                                 </>
                             )}
                         </Button>

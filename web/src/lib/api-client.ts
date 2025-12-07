@@ -413,6 +413,12 @@ export const paperApi = {
     return response.data;
   },
 
+  // 更新试卷
+  update: async (id: string, data: PaperPayload) => {
+    const response = await api.put(`/api/teacher/papers/${id}`, data);
+    return response.data;
+  },
+
   // 删除试卷
   delete: async (id: string) => {
     const response = await api.delete(`/api/teacher/papers/${id}`);
