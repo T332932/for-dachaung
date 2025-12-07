@@ -811,8 +811,12 @@ class ExportService:
                         tikz_block = re.sub(r'=c[0-9a-f]{6}', '=black', tikz_block)
                         tikz_block = re.sub(r'\{c[0-9a-f]{6}\}', '{black}', tikz_block)
                         
-                        # 添加高考卷风格设置 - 注意 svg2tikz 可能已有选项
-                        our_options = '>=Stealth, scale=0.8, line width=0.5pt, baseline=(current bounding box.north)'
+                        # 删除 svg2tikz 生成的 viewBox 边界矩形（造成白边）
+                        # 匹配类似 \path (x, y) rectangle (x2, y2); 的空路径
+                        tikz_block = re.sub(r'\\path\s+\([^)]+\)\s+rectangle\s+\([^)]+\);?\s*\n*', '', tikz_block)
+                        
+                        # 添加高考卷风格设置
+                        our_options = '>=Stealth, scale=0.6, line width=0.5pt, baseline=(current bounding box.north)'
                         if r'\begin{tikzpicture}[' in tikz_block:
                             # 已有选项，合并到开头
                             tikz_block = tikz_block.replace(
@@ -825,6 +829,9 @@ class ExportService:
                                 r'\begin{tikzpicture}',
                                 r'\begin{tikzpicture}[' + our_options + ']'
                             )
+                        
+                        # 用 resizebox 限制宽度，防止超出 minipage
+                        tikz_block = r'\resizebox{\linewidth}{!}{' + tikz_block + '}'
                         return tikz_block
             except Exception:
                 pass  # 回退到手动解析
