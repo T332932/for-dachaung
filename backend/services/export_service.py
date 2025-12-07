@@ -404,6 +404,7 @@ class ExportService:
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,patterns,calc}
 \usepackage{graphicx}
+\usepackage[export]{adjustbox}
 \usepackage{enumitem}
 \setenumerate{itemsep=0pt,partopsep=0pt,parsep=\parskip,topsep=0pt}
 \allowdisplaybreaks[4]
@@ -830,8 +831,8 @@ class ExportService:
                                 r'\begin{tikzpicture}[' + our_options + ']'
                             )
                         
-                        # 用 resizebox 限制宽度，防止超出 minipage
-                        tikz_block = r'\resizebox{\linewidth}{!}{' + tikz_block + '}'
+                        # 用 adjustbox 限制宽度和高度，防止超出 minipage 或过高
+                        tikz_block = r'\adjustbox{max width=\linewidth, max height=6cm}{' + tikz_block + '}'
                         return tikz_block
             except Exception:
                 pass  # 回退到手动解析
