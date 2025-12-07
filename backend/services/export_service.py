@@ -873,7 +873,7 @@ class ExportService:
                         tikz_block = re.sub(r'\\path\s+\([^)]+\)\s+rectangle\s+\([^)]+\);?\s*\n*', '', tikz_block)
                         
                         # 添加高考卷风格设置
-                        our_options = '>=Stealth, scale=0.6, line width=0.5pt, baseline=(current bounding box.north)'
+                        our_options = '>=Stealth, scale=0.8, line width=0.5pt, baseline=(current bounding box.north)'
                         if r'\begin{tikzpicture}[' in tikz_block:
                             # 已有选项，合并到开头
                             tikz_block = tikz_block.replace(
