@@ -537,21 +537,6 @@ class ExportService:
                 try:
                     item_parts = []
                     
-                    # 题干
-                    escaped_text = self._escape_latex(q.question_text)
-                    item_parts.append(r"\item " + escaped_text)
-                    
-                    # 选项（选择题）
-                    if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
-                        a, b, c, d = [self._escape_latex(self._strip_option_prefix(opt)) for opt in q.options]
-                        item_parts.append(r"\\" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
-                    elif q.options:
-                        # 非标准选项数量
-                        item_parts.append(r"\\")
-                        for i, opt in enumerate(q.options):
-                            label = chr(ord('A') + i)
-                            item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
-                    
                     # 获取图形内容（如果有）
                     diagram_content = None
                     if q.has_geometry and q.geometry_tikz:
@@ -566,34 +551,67 @@ class ExportService:
                             if svg_result:
                                 fname, data = svg_result
                                 attachments.append((fname, data))
-                                diagram_content = f'\\includegraphics[width=0.35\\textwidth]{{{fname}}}'
+                                diagram_content = f'\\includegraphics[width=0.9\\textwidth]{{{fname}}}'
                     
-                    # 根据题型决定图形布局
-                    if section_type == 'solve':
-                        # 解答题：图在留白左侧（左图右留白，等高对齐）
-                        if diagram_content and not include_answer:
-                            item_parts.append("\n" + r"\par\noindent")
-                            item_parts.append(r"\begin{minipage}[c]{0.48\textwidth}")
-                            item_parts.append(r"\centering")
-                            item_parts.append(diagram_content)
-                            item_parts.append(r"\end{minipage}")
-                            item_parts.append(r"\hfill")
-                            item_parts.append(r"\begin{minipage}[c]{0.48\textwidth}")
-                            item_parts.append(r"\rule{0pt}{1pt}")  # 占位，让两边等高
-                            item_parts.append(r"\end{minipage}")
-                        elif diagram_content:
-                            # 有答案时，图片正常显示
-                            item_parts.append(self._wrap_diagram_block(diagram_content))
-                        elif not include_answer:
-                            # 没有图但需要留白
-                            item_parts.append("\n" + r"\vspace{6em}")
+                    # 题干
+                    escaped_text = self._escape_latex(q.question_text)
+                    
+                    # 根据题型和是否有图决定布局
+                    if section_type in ('choice_single', 'choice_multi', 'fill') and diagram_content:
+                        # 选填题有图：左边题干+选项(55%)，右边图(45%)，并排显示
+                        item_parts.append(r"\item")
+                        item_parts.append(r"\begin{minipage}[t]{0.52\textwidth}")
+                        item_parts.append(escaped_text)
+                        
+                        # 选项
+                        if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
+                            a, b, c, d = [self._escape_latex(self._strip_option_prefix(opt)) for opt in q.options]
+                            item_parts.append("\n" + r"\\" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
+                        elif q.options:
+                            item_parts.append(r"\\")
+                            for i, opt in enumerate(q.options):
+                                label = chr(ord('A') + i)
+                                item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
+                        
+                        item_parts.append(r"\end{minipage}")
+                        item_parts.append(r"\hfill")
+                        item_parts.append(r"\begin{minipage}[t]{0.45\textwidth}")
+                        item_parts.append(r"\centering")
+                        item_parts.append(diagram_content)
+                        item_parts.append(r"\end{minipage}")
                     else:
-                        # 选填题：题干和图并排（图在右侧，和题干等高）
-                        if diagram_content:
-                            # 用 hfill + 右对齐 minipage 实现图在右侧
-                            item_parts.append("\n" + r"\par\noindent\hfill\begin{minipage}{0.45\textwidth}\centering")
-                            item_parts.append(diagram_content)
-                            item_parts.append(r"\end{minipage}\hfill\null")
+                        # 无图或解答题：正常布局
+                        item_parts.append(r"\item " + escaped_text)
+                        
+                        # 选项（选择题）
+                        if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
+                            a, b, c, d = [self._escape_latex(self._strip_option_prefix(opt)) for opt in q.options]
+                            item_parts.append(r"\\" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
+                        elif q.options:
+                            item_parts.append(r"\\")
+                            for i, opt in enumerate(q.options):
+                                label = chr(ord('A') + i)
+                                item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
+                        
+                        # 解答题布局
+                        if section_type == 'solve':
+                            if diagram_content and not include_answer:
+                                # 解答题：图在留白左侧（左图右留白，等高对齐）
+                                item_parts.append("\n" + r"\par\noindent")
+                                item_parts.append(r"\begin{minipage}[c]{0.48\textwidth}")
+                                item_parts.append(r"\centering")
+                                item_parts.append(diagram_content)
+                                item_parts.append(r"\end{minipage}")
+                                item_parts.append(r"\hfill")
+                                item_parts.append(r"\begin{minipage}[c]{0.48\textwidth}")
+                                item_parts.append(r"\rule{0pt}{1pt}")
+                                item_parts.append(r"\end{minipage}")
+                            elif diagram_content:
+                                # 有答案时，图片正常显示
+                                item_parts.append(self._wrap_diagram_block(diagram_content))
+                            elif not include_answer:
+                                # 没有图但需要留白
+                                item_parts.append("\n" + r"\vspace{6em}")
                     
                     # 答案和解析
                     if include_answer and q.answer:
