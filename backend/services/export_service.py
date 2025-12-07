@@ -662,6 +662,8 @@ class ExportService:
                     "-halt-on-error",
                     tex_file.name,
                 ]
+                # 编译两次以解析交叉引用（如 \pageref{LastPage}）
+                subprocess.run(cmd, cwd=tmp_path, capture_output=True, text=True)
                 proc = subprocess.run(
                     cmd,
                     cwd=tmp_path,
