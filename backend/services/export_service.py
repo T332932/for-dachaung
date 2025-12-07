@@ -793,11 +793,20 @@ class ExportService:
                     match = re.search(r'(\\begin\{tikzpicture\}.*?\\end\{tikzpicture\})', tikz_code, re.DOTALL)
                     if match:
                         tikz_block = match.group(1)
-                        # 添加高考卷风格设置
-                        tikz_block = tikz_block.replace(
-                            r'\begin{tikzpicture}',
-                            r'\begin{tikzpicture}[>=Stealth, scale=0.8, line width=0.5pt]'
-                        )
+                        # 添加高考卷风格设置 - 注意 svg2tikz 可能已有选项
+                        our_options = '>=Stealth, scale=0.8, line width=0.5pt'
+                        if r'\begin{tikzpicture}[' in tikz_block:
+                            # 已有选项，合并到开头
+                            tikz_block = tikz_block.replace(
+                                r'\begin{tikzpicture}[',
+                                r'\begin{tikzpicture}[' + our_options + ', '
+                            )
+                        else:
+                            # 无选项，添加新的
+                            tikz_block = tikz_block.replace(
+                                r'\begin{tikzpicture}',
+                                r'\begin{tikzpicture}[' + our_options + ']'
+                            )
                         return tikz_block
             except Exception:
                 pass  # 回退到手动解析
