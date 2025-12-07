@@ -790,6 +790,32 @@ class ExportService:
                 if len(pts) >= 2:
                     coords = " -- ".join(["(%.3f,%.3f)" % (x * scale, flip_y(y)) for x, y in pts])
                     cmds.append(r"\draw%s %s;" % (dashed, coords))
+            elif tag == "rect":
+                # 矩形：左上角 (x, y)，宽 width，高 height
+                x, y = fmt(el.get("x")), fmt(el.get("y"))
+                w, h = fmt(el.get("width")), fmt(el.get("height"))
+                # 只绘制有 stroke 的矩形，忽略纯背景
+                stroke = el.get("stroke", "")
+                if stroke and stroke.lower() != "none":
+                    x1, y1 = x * scale, flip_y(y)
+                    x2, y2 = (x + w) * scale, flip_y(y + h)
+                    cmds.append(r"\draw%s (%.3f,%.3f) rectangle (%.3f,%.3f);" % (dashed, x1, y1, x2, y2))
+            elif tag == "polygon":
+                # 多边形：points="x1,y1 x2,y2 x3,y3 ..."
+                points_str = el.get("points", "")
+                pts = []
+                for pt in points_str.replace(",", " ").split():
+                    try:
+                        pts.append(float(pt))
+                    except:
+                        continue
+                if len(pts) >= 6:  # 至少 3 个点
+                    coords = []
+                    for i in range(0, len(pts), 2):
+                        if i + 1 < len(pts):
+                            coords.append("(%.3f,%.3f)" % (pts[i] * scale, flip_y(pts[i+1])))
+                    if coords:
+                        cmds.append(r"\draw%s %s -- cycle;" % (dashed, " -- ".join(coords)))
             elif tag == "text":
                 x, y = fmt(el.get("x")), fmt(el.get("y"))
                 dx = fmt(el.get("dx"))
