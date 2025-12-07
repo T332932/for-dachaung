@@ -1203,6 +1203,7 @@ class ExportService:
         """
         if not text:
             return ""
+        # Unicode 符号替换
         replacements = {
             "π": r"\pi",
             "∥": r"\parallel",
@@ -1210,9 +1211,20 @@ class ExportService:
             "×": r"\times",
             "÷": r"\div",
             "°": r"^\circ",
+            # Unicode 下标数字
+            "₀": "_0", "₁": "_1", "₂": "_2", "₃": "_3", "₄": "_4",
+            "₅": "_5", "₆": "_6", "₇": "_7", "₈": "_8", "₉": "_9",
+            # Unicode 上标数字
+            "⁰": "^0", "¹": "^1", "²": "^2", "³": "^3", "⁴": "^4",
+            "⁵": "^5", "⁶": "^6", "⁷": "^7", "⁸": "^8", "⁹": "^9",
         }
         for k, v in replacements.items():
             text = text.replace(k, v)
+        # 三角函数转为 LaTeX 命令（仅替换独立的函数名，避免误替换变量名）
+        trig_funcs = ["sin", "cos", "tan", "cot", "sec", "csc", "arcsin", "arccos", "arctan", "ln", "log", "exp"]
+        for fn in trig_funcs:
+            # 匹配单词边界，避免替换 asin -> a\sin
+            text = re.sub(rf"\b{fn}\b", rf"\\{fn}", text)
         # 将惯用的 // 视为平行符号，避免 URL 误替换：排除前面有冒号或反斜杠的情况
         text = re.sub(r"(?<!:)(?<!\\)//", r"\\parallel ", text)
         return text
