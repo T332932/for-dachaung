@@ -566,9 +566,9 @@ class ExportService:
                         # 选项
                         if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
                             a, b, c, d = [self._escape_latex(self._strip_option_prefix(opt)) for opt in q.options]
-                            item_parts.append("\n" + r"\\" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
+                            item_parts.append("\n" + r"\par\noindent" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
                         elif q.options:
-                            item_parts.append(r"\\")
+                            item_parts.append("\n" + r"\par\noindent")
                             for i, opt in enumerate(q.options):
                                 label = chr(ord('A') + i)
                                 item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
@@ -586,9 +586,9 @@ class ExportService:
                         # 选项（选择题）
                         if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
                             a, b, c, d = [self._escape_latex(self._strip_option_prefix(opt)) for opt in q.options]
-                            item_parts.append(r"\\" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
+                            item_parts.append("\n" + r"\par\noindent" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
                         elif q.options:
-                            item_parts.append(r"\\")
+                            item_parts.append("\n" + r"\par\noindent")
                             for i, opt in enumerate(q.options):
                                 label = chr(ord('A') + i)
                                 item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
