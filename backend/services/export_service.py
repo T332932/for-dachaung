@@ -406,7 +406,7 @@ class ExportService:
   every picture/.style={scale=0.75},
   every node/.style={font=\small},
   line width=0.5pt,
-  >=Stealth[length=4pt]
+  >={Stealth[length=4pt]}
 }
 
 \usepackage[paperheight=26cm,paperwidth=18.4cm,left=2cm,right=2cm,top=1.5cm,bottom=2cm,headsep=10pt]{geometry}
