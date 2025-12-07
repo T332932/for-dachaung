@@ -778,11 +778,18 @@ class ExportService:
         # 优先使用 svg2tikz 库
         if svg2tikz is not None:
             try:
-                # svg2tikz.convert 返回完整 TikZ 代码
-                tikz_code = svg2tikz.convert_svg(svg_content)
+                import sys
+                # svg2tikz 内部使用 argparse.parse_args()，会读取 sys.argv
+                # 在服务器环境下会和 uvicorn 参数冲突，需要临时替换
+                original_argv = sys.argv
+                sys.argv = ['svg2tikz']  # 模拟命令行调用
+                try:
+                    tikz_code = svg2tikz.convert_svg(svg_content)
+                finally:
+                    sys.argv = original_argv  # 恢复原始参数
+                
                 if tikz_code:
                     # 提取 tikzpicture 环境内容
-                    import re
                     match = re.search(r'(\\begin\{tikzpicture\}.*?\\end\{tikzpicture\})', tikz_code, re.DOTALL)
                     if match:
                         tikz_block = match.group(1)
