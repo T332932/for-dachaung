@@ -793,6 +793,17 @@ class ExportService:
                     match = re.search(r'(\\begin\{tikzpicture\}.*?\\end\{tikzpicture\})', tikz_code, re.DOTALL)
                     if match:
                         tikz_block = match.group(1)
+                        
+                        # 清理 svg2tikz 输出中未定义的命令（如 \globalscale）
+                        # 移除 yscale=\globalscale, xscale=\globalscale, every node/.append style={scale=\globalscale}
+                        tikz_block = re.sub(r',?\s*yscale=\\\\globalscale', '', tikz_block)
+                        tikz_block = re.sub(r',?\s*xscale=\\\\globalscale', '', tikz_block)
+                        tikz_block = re.sub(r',?\s*every node/\.append style=\{scale=\\\\globalscale\}', '', tikz_block)
+                        # 清理多余逗号和空格
+                        tikz_block = re.sub(r'\[\s*,', '[', tikz_block)
+                        tikz_block = re.sub(r',\s*,', ',', tikz_block)
+                        tikz_block = re.sub(r',\s*\]', ']', tikz_block)
+                        
                         # 添加高考卷风格设置 - 注意 svg2tikz 可能已有选项
                         our_options = '>=Stealth, scale=0.8, line width=0.5pt'
                         if r'\begin{tikzpicture}[' in tikz_block:
