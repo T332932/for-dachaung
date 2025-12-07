@@ -558,9 +558,9 @@ class ExportService:
                     
                     # 根据题型和是否有图决定布局
                     if section_type in ('choice_single', 'choice_multi', 'fill') and diagram_content:
-                        # 选填题有图：左边题干+选项(55%)，右边图(45%)，并排显示
+                        # 选填题有图：左边题干+选项(70%)，右边图(28%)，并排显示（高考真卷标准比例）
                         item_parts.append(r"\item")
-                        item_parts.append(r"\begin{minipage}[t]{0.52\textwidth}")
+                        item_parts.append(r"\begin{minipage}[t]{0.70\textwidth}")
                         item_parts.append(escaped_text)
                         
                         # 选项
@@ -573,10 +573,9 @@ class ExportService:
                                 label = chr(ord('A') + i)
                                 item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
                         
-                        item_parts.append(r"\end{minipage}")
-                        item_parts.append(r"\hfill")
-                        item_parts.append(r"\begin{minipage}[t]{0.45\textwidth}")
-                        item_parts.append(r"\centering")
+                        item_parts.append(r"\end{minipage}%")
+                        item_parts.append(r"\begin{minipage}[t]{0.28\textwidth}")
+                        item_parts.append(r"\raggedleft")
                         item_parts.append(diagram_content)
                         item_parts.append(r"\end{minipage}")
                     else:
