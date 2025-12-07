@@ -564,12 +564,19 @@ class ExportService:
                     
                     # 根据题型和是否有图决定布局
                     if section_type in ('choice_single', 'choice_multi', 'fill') and diagram_content:
-                        # 选填题有图：左边题干+选项(70%)，右边图(28%)，并排显示（高考真卷标准比例）
+                        # 选填题有图：题干和图并排，选项在下方独立成行（高考真卷风格）
                         item_parts.append(r"\item")
-                        item_parts.append(r"\begin{minipage}[t]{0.70\textwidth}")
+                        item_parts.append(r"\noindent")
+                        item_parts.append(r"\begin{minipage}[t]{0.68\textwidth}")
                         item_parts.append(escaped_text)
+                        item_parts.append(r"\end{minipage}%")
+                        item_parts.append(r"\hfill")
+                        item_parts.append(r"\begin{minipage}[t]{0.28\textwidth}")
+                        item_parts.append(r"\raggedleft")
+                        item_parts.append(diagram_content)
+                        item_parts.append(r"\end{minipage}")
                         
-                        # 选项
+                        # 选项放在 minipage 外面，独立成行，不会与图重叠
                         if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
                             a, b, c, d = [self._escape_latex(self._strip_option_prefix(opt)) for opt in q.options]
                             item_parts.append("\n" + r"\par\noindent" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
@@ -578,12 +585,6 @@ class ExportService:
                             for i, opt in enumerate(q.options):
                                 label = chr(ord('A') + i)
                                 item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
-                        
-                        item_parts.append(r"\end{minipage}%")
-                        item_parts.append(r"\begin{minipage}[t]{0.28\textwidth}")
-                        item_parts.append(r"\raggedleft")
-                        item_parts.append(diagram_content)
-                        item_parts.append(r"\end{minipage}")
                     else:
                         # 无图或解答题：正常布局
                         item_parts.append(r"\item " + escaped_text)
