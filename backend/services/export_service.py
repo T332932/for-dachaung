@@ -561,9 +561,14 @@ class ExportService:
                     # 题干
                     escaped_text = self._escape_latex(q.question_text)
                     
-                    # 根据题型和是否有图决定布局
-                    if section_type in ('choice_single', 'choice_multi', 'fill') and diagram_content:
-                        # 选填题有图：左边题干+选项(70%)，右边图(28%)，并排显示（高考真卷标准比例）
+                    # 判断图形是否应该放在下方（大图/高图）
+                    place_diagram_below = False
+                    if q.geometry_svg and diagram_content:
+                        place_diagram_below = self._should_place_diagram_below(q.geometry_svg)
+                    
+                    # 根据题型和图形大小决定布局
+                    if section_type in ('choice_single', 'choice_multi', 'fill') and diagram_content and not place_diagram_below:
+                        # 选填题有小图：左边题干+选项(70%)，右边图(28%)，并排显示（高考真卷标准比例）
                         item_parts.append(r"\item")
                         item_parts.append(r"\begin{minipage}[t]{0.70\textwidth}")
                         item_parts.append(escaped_text)
@@ -583,6 +588,23 @@ class ExportService:
                         item_parts.append(r"\raggedleft")
                         item_parts.append(diagram_content)
                         item_parts.append(r"\end{minipage}")
+                    elif section_type in ('choice_single', 'choice_multi', 'fill') and diagram_content and place_diagram_below:
+                        # 选填题有大图：题干+选项在上，图在下居中
+                        item_parts.append(r"\item " + escaped_text)
+                        
+                        # 选项
+                        if section_type in ('choice_single', 'choice_multi') and q.options and len(q.options) == 4:
+                            a, b, c, d = [self._escape_latex(self._strip_option_prefix(opt)) for opt in q.options]
+                            item_parts.append("\n" + r"\par\noindent" + "\n" + r"\choice{%s}{%s}{%s}{%s}" % (a, b, c, d))
+                        elif q.options:
+                            item_parts.append("\n" + r"\par\noindent")
+                            for i, opt in enumerate(q.options):
+                                label = chr(ord('A') + i)
+                                item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
+                        
+                        # 大图放在选项下方居中
+                        item_parts.append("\n" + r"\par\noindent\centering")
+                        item_parts.append(diagram_content)
                     else:
                         # 无图或解答题：正常布局
                         item_parts.append(r"\item " + escaped_text)
@@ -750,6 +772,50 @@ class ExportService:
             return fname, png_bytes
         except Exception:
             return None
+
+    def _get_svg_dimensions(self, svg_content: str) -> tuple[float, float]:
+        """
+        从 SVG 获取尺寸（宽度, 高度）。
+        返回 (width, height)，如果无法解析则返回默认值 (100, 100)。
+        """
+        if not svg_content:
+            return (100.0, 100.0)
+        try:
+            root = ET.fromstring(svg_content)
+            # 优先从 viewBox 获取
+            viewBox = root.get('viewBox')
+            if viewBox:
+                parts = viewBox.split()
+                if len(parts) >= 4:
+                    width = float(parts[2]) - float(parts[0])
+                    height = float(parts[3]) - float(parts[1])
+                    return (width, height)
+            # 其次从 width/height 属性获取
+            w = root.get('width', '100')
+            h = root.get('height', '100')
+            # 去掉单位（如 "400px" -> "400"）
+            w = ''.join(c for c in w if c.isdigit() or c == '.')
+            h = ''.join(c for c in h if c.isdigit() or c == '.')
+            return (float(w) if w else 100.0, float(h) if h else 100.0)
+        except Exception:
+            return (100.0, 100.0)
+
+    def _should_place_diagram_below(self, svg_content: str) -> bool:
+        """
+        根据 SVG 尺寸判断图形应该放在下方还是右侧。
+        大图或高图放下方，小图放右侧。
+        """
+        width, height = self._get_svg_dimensions(svg_content)
+        # 宽图（宽度 > 350）放下方
+        if width > 350:
+            return True
+        # 高图（高度 > 宽度 * 1.3）放下方
+        if height > width * 1.3:
+            return True
+        # 非常大的图放下方
+        if width * height > 80000:
+            return True
+        return False
 
     def _svg_to_pdf_attachment(self, svg_content: str) -> tuple[str, bytes] | None:
         """
