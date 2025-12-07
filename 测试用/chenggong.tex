@@ -33,17 +33,17 @@
 \setlength\halftabwidth{0.45\textwidth}
 
 \newcommand{\choice}[4]{%
-\settowidth\widthcha{{\sf A}M.#1}%
-\setlength{\widthch}{\widthcha}%
-\settowidth\widthchb{{\sf B}M.#2}%
-\ifthenelse{\lengthtest{\widthch < \widthchb}}{\setlength{\widthch}{\widthchb}}{}%
-\settowidth\widthchb{{\sf C}M.#3}%
-\ifthenelse{\lengthtest{\widthch < \widthchb}}{\setlength{\widthch}{\widthchb}}{}%
-\settowidth\widthchb{{\sf D}M.#4}%
-\ifthenelse{\lengthtest{\widthch < \widthchb}}{\setlength{\widthch}{\widthchb}}{}%
-\ifthenelse{\lengthtest{\widthch < \fourthtabwidth}}{\onech{#1}{#2}{#3}{#4}}%
-{\ifthenelse{\lengthtest{\widthch < \halftabwidth}}{\twoch{#1}{#2}{#3}{#4}}%
-{\fourch{#1}{#2}{#3}{#4}}}%
+  \settowidth\widthcha{{\sf A}M.#1}%
+  \setlength{\widthch}{\widthcha}%
+  \settowidth\widthchb{{\sf B}M.#2}%
+  \ifthenelse{\lengthtest{\widthch < \widthchb}}{\setlength{\widthch}{\widthchb}}{}%
+  \settowidth\widthchb{{\sf C}M.#3}%
+  \ifthenelse{\lengthtest{\widthch < \widthchb}}{\setlength{\widthch}{\widthchb}}{}%
+  \settowidth\widthchb{{\sf D}M.#4}%
+  \ifthenelse{\lengthtest{\widthch < \widthchb}}{\setlength{\widthch}{\widthchb}}{}%
+  \ifthenelse{\lengthtest{\widthch < \fourthtabwidth}}{\onech{#1}{#2}{#3}{#4}}%
+  {\ifthenelse{\lengthtest{\widthch < \halftabwidth}}{\twoch{#1}{#2}{#3}{#4}}%
+  {\fourch{#1}{#2}{#3}{#4}}}%
 }
 
 % 填空横线（兼容数学模式和文本模式）
@@ -69,19 +69,19 @@
 \begin{enumerate}[align=left,labelindent=0em,label={\bf\sf\arabic*.},labelwidth=1.5em,labelsep=0em,leftmargin=1.5em,itemsep=0pt,topsep=0pt,start=1]
 \item 已知集合 $A = \{x | -5 < x^3 < 5\}, B = \{-3, -1, 0, 2, 3\}$，则 $A \cap B$ （ ）
 \\
-\choice{A. $\{-1, 0\}$}{B. $\{2, 3\}$}{C. $\{-3, -1, 0\}$}{D. $\{-1, 0, 2\}$}
+\choice{$\{-1, 0\}$}{$\{2, 3\}$}{$\{-3, -1, 0\}$}{$\{-1, 0, 2\}$}
 \item 若 $\frac{z}{z-1} = 1+i$，则 $z=$ ( )
 \\
-\choice{A. $-1-i$}{B. $-1+i$}{C. $1-i$}{D. $1+i$}
+\choice{$-1-i$}{$-1+i$}{$1-i$}{$1+i$}
 \item 已知向量 $\boldsymbol{a}=(0,1), \boldsymbol{b}=(2,x)$，若 $\boldsymbol{b} \perp (\boldsymbol{b}-4\boldsymbol{a})$，则 $x=$
 \\
-\choice{A. -2}{B. -1}{C. 1}{D. 2}
+\choice{-2}{-1}{1}{2}
 \item 已知 $\cos(\alpha + \beta) = m, \tan \alpha \tan \beta = 2$，则 $\cos(\alpha - \beta) = (\quad)$
 \\
-\choice{A. $-3m$}{B. $-\frac{m}{3}$}{C. $\frac{m}{3}$}{D. $3m$}
+\choice{$-3m$}{$-\frac{m}{3}$}{$\frac{m}{3}$}{$3m$}
 \item 已知圆柱和圆锥的底面半径相等，侧面积相等，且它们的高均为 $\sqrt{3}$，则圆锥的体积为（ ）
 \\
-\choice{A. $2\sqrt{3}\pi$}{B. $3\sqrt{3}\pi$}{C. $6\sqrt{3}\pi$}{D. $9\sqrt{3}\pi$}
+\choice{$2\sqrt{3}\pi$}{$3\sqrt{3}\pi$}{$6\sqrt{3}\pi$}{$9\sqrt{3}\pi$}
 
 \par\noindent\hfill\begin{minipage}{0.48\textwidth}\centering
 \begin{tikzpicture}[>=Stealth, scale=0.8, line width=0.5pt]
@@ -103,10 +103,10 @@
 
 \item 已知函数为 $f(x) = \begin{cases} -x^2-2ax-a, & x<0 \\ e^x+\ln(x+1), & x \ge 0 \end{cases}$，在 $\mathbf{R}$ 上单调递增，则 $a$ 取值的范围是（ ）
 \\
-\choice{A. $(-\infty, 0]$}{B. $[-1, 0]$}{C. $[-1, 1]$}{D. $[0, +\infty)$}
+\choice{$(-\infty, 0]$}{$[-1, 0]$}{$[-1, 1]$}{$[0, +\infty)$}
 \item 当 $x \in [0, 2\pi]$ 时，曲线 $y = \sin x$ 与 $y = 2\sin\left(3x - \frac{\pi}{6}\right)$ 的交点个数为（　　）
 \\
-\choice{A. 3}{B. 4}{C. 6}{D. 8}
+\choice{3}{4}{6}{8}
 
 \par\noindent\hfill\begin{minipage}{0.48\textwidth}\centering
 \begin{tikzpicture}[>=Stealth, scale=0.8, line width=0.5pt]
@@ -142,17 +142,16 @@
 
 \item 已知函数 $f(x)$ 的定义域为 $\mathbf{R}$，$f(x) > f(x-1) + f(x-2)$，且当 $x<3$ 时 $f(x)=x$，则下列结论中一定正确的是（ ）
 \\
-\choice{A. $f(10) > 100$}{B. $f(20) > 1000$}{C. $f(10) < 1000$}{D. $f(20) < 10000$}
+\choice{$f(10) > 100$}{$f(20) > 1000$}{$f(10) < 1000$}{$f(20) < 10000$}
 \item 为了了解推动出口后的亩收入（单位：万元）情况，从该种植区抽取样本，得到推动出口后亩收入的样本均值 $\bar{x}=2.1$，样本方差 $s^2=0.01$，已知该种植区以往的亩收入 $X$ 服从正态分布 $N(1.8, 0.1^2)$，假设推动出口后的亩收入 $Y$ 服从正态分布 $N(\bar{x}, s^2)$，则( )（若随机变量 $Z$ 服从正态分布 $N(u, \sigma^2)$，$P(Z < u+\sigma) \approx 0.8413$）
 \\
-\choice{A. $P(X > 2) > 0.2$}{B. $P(X > 2) < 0.5$}{C. $P(Y > 2) > 0.5$}{D. $P(Y > 2) < 0.8$}
+\choice{$P(X > 2) > 0.2$}{$P(X > 2) < 0.5$}{$P(Y > 2) > 0.5$}{$P(Y > 2) < 0.8$}
 \item 设函数 $f(x)=(x-1)^2(x-4)$，则 ( )
 \\
-\choice{A. $x=3$ 是 $f(x)$ 的极小值点}{B. 当 $0<x<1$ 时, $f(x)<f(x^2)$}{C. 当 $1<x<2$ 时, $-4<f(2x-1)<0$}{D. 当 $-1<x<0$ 时, $f(2-x)>f(x)$}
+\choice{$x=3$ 是 $f(x)$ 的极小值点}{当 $0<x<1$ 时, $f(x)<f(x^2)$}{当 $1<x<2$ 时, $-4<f(2x-1)<0$}{当 $-1<x<0$ 时, $f(2-x)>f(x)$}
 
 \par\noindent\hfill\begin{minipage}{0.48\textwidth}\centering
 \begin{tikzpicture}[>=Stealth, scale=0.8, line width=0.5pt]
-\draw (0.000,12.000) -- (0.300,11.895) -- (0.000,11.790) -- cycle;
 \draw (0.600,4.500) -- (11.400,4.500);
 \draw (4.500,0.600) -- (4.500,11.400);
 \node at (11.550,4.500) {$x$};
@@ -183,11 +182,10 @@
 
 \item 造型∾可以做成美丽的丝带，将其看作图中曲线 $C$ 的一部分. 已知 $C$ 过坐标原点 $O$. 且 $C$ 上的点满足横坐标大于 $-2$，到点 $F(2,0)$ 的距离与到定直线 $x=a(a<0)$ 的距离之积为 $4$，则（ ）
 \\
-\choice{A. $a=-2$}{B. 点 $(2\sqrt{2},0)$ 在 $C$ 上}{C. $C$ 在第一象限的点的纵坐标的最大值为 $1$}{D. 当点 $(x_0, y_0)$ 在 $C$ 上时, $y_0 \le \frac{4}{x_0+2}$}
+\choice{$a=-2$}{点 $(2\sqrt{2},0)$ 在 $C$ 上}{$C$ 在第一象限的点的纵坐标的最大值为 $1$}{当点 $(x_0, y_0)$ 在 $C$ 上时, $y_0 \le \frac{4}{x_0+2}$}
 
 \par\noindent\hfill\begin{minipage}{0.48\textwidth}\centering
 \begin{tikzpicture}[>=Stealth, scale=0.8, line width=0.5pt]
-\draw (0.000,12.000) -- (0.300,11.895) -- (0.000,11.790) -- cycle;
 \draw (0.000,6.000) -- (11.700,6.000);
 \draw (4.500,0.000) -- (4.500,11.700);
 \node at (11.400,5.400) {$x$};
@@ -246,7 +244,6 @@
 
 \par\noindent\hfill\begin{minipage}{0.48\textwidth}\centering
 \begin{tikzpicture}[>=Stealth, scale=0.8, line width=0.5pt]
-\draw (0.000,12.000) -- (0.300,11.850) -- (0.000,11.700) -- (0.000,12.000);
 \draw (0.300,6.000) -- (11.700,6.000);
 \draw (6.000,0.300) -- (6.000,11.700);
 \node at (11.550,5.550) {$x$};

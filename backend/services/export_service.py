@@ -1052,7 +1052,7 @@ class ExportService:
                 x, y = fmt(el.get("x")), fmt(el.get("y"))
                 dx = fmt(el.get("dx"))
                 dy = -fmt(el.get("dy"))  # dy 需要翻转
-                txt = (el.text or "").strip()
+                txt = self._normalize_math_content((el.text or "").strip())
                 if txt:
                     # 用数学模式包裹文字（适合坐标点标签）
                     cmds.append(r"\node at (%.3f,%.3f) {$%s$};" % ((x + dx) * scale, flip_y(y) + dy * scale, txt))
@@ -1146,7 +1146,7 @@ class ExportService:
         for i, part in enumerate(parts):
             if part.startswith('$$') or part.startswith('$'):
                 # 数学环境，直接保留
-                result.append(part)
+                result.append(self._normalize_math_content(part))
             else:
                 # 非数学环境，转义特殊字符
                 normalized = _normalize_plain(part)
@@ -1196,3 +1196,23 @@ class ExportService:
         if not text:
             return ""
         return re.sub(r"^\s*[A-DＡ-Ｄa-d][\.\。．、﹒\)]\s*", "", text).strip()
+
+    def _normalize_math_content(self, text: str) -> str:
+        """
+        将常见的 Unicode 符号替换为 LaTeX 数学命令，供数学环境或 TikZ 节点使用。
+        """
+        if not text:
+            return ""
+        replacements = {
+            "π": r"\pi",
+            "∥": r"\parallel",
+            "∞": r"\infty",
+            "×": r"\times",
+            "÷": r"\div",
+            "°": r"^\circ",
+        }
+        for k, v in replacements.items():
+            text = text.replace(k, v)
+        # 将惯用的 // 视为平行符号，避免 URL 误替换：排除前面有冒号或反斜杠的情况
+        text = re.sub(r"(?<!:)(?<!\\)//", r"\parallel ", text)
+        return text
