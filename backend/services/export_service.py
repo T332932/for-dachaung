@@ -21,6 +21,11 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     cairosvg = None
 
+try:
+    import svg2tikz
+except ImportError:  # pragma: no cover - optional dependency
+    svg2tikz = None
+
 
 class ExportService:
     """
@@ -764,8 +769,39 @@ class ExportService:
 
     def _svg_to_tikz_block(self, svg_content: str) -> str | None:
         """
-        将简单 SVG 转换为 TikZ 片段（支持 line/circle/ellipse/text 基础元素）。
-        若无法解析则返回 None。
+        将 SVG 转换为 TikZ 片段。
+        优先使用 svg2tikz 库（更完整的 SVG 支持），若不可用则回退到手动解析。
+        """
+        if not svg_content:
+            return None
+        
+        # 优先使用 svg2tikz 库
+        if svg2tikz is not None:
+            try:
+                # svg2tikz.convert 返回完整 TikZ 代码
+                tikz_code = svg2tikz.convert_svg(svg_content)
+                if tikz_code:
+                    # 提取 tikzpicture 环境内容
+                    import re
+                    match = re.search(r'(\\begin\{tikzpicture\}.*?\\end\{tikzpicture\})', tikz_code, re.DOTALL)
+                    if match:
+                        tikz_block = match.group(1)
+                        # 添加高考卷风格设置
+                        tikz_block = tikz_block.replace(
+                            r'\begin{tikzpicture}',
+                            r'\begin{tikzpicture}[>=Stealth, scale=0.8, line width=0.5pt]'
+                        )
+                        return tikz_block
+            except Exception:
+                pass  # 回退到手动解析
+        
+        # 回退：手动解析简单 SVG 元素
+        return self._svg_to_tikz_block_fallback(svg_content)
+    
+    def _svg_to_tikz_block_fallback(self, svg_content: str) -> str | None:
+        """
+        手动解析 SVG 转 TikZ（支持 line/circle/ellipse/text/path 基础元素）。
+        作为 svg2tikz 不可用时的回退方案。
         """
         if not svg_content:
             return None
@@ -816,58 +852,12 @@ class ExportService:
             return ("dash" in style) or ("dash" in cls) or (dasharray not in ("", None))
 
         def parse_path(d: str) -> List[List[tuple[float, float]]]:
-            """
-            粗略解析 path 数据，支持直线/水平/垂直/二次、三次贝塞尔曲线。
-            返回若干折线段，每段为点列表，后续用 -- 连接。
-            复杂的弧线（A/a）会退化为直线连接起终点。
-            """
-            import re
-
+            """粗略解析 path 数据，支持基础命令"""
             def tokenize(data: str) -> List[str]:
                 return re.findall(r"[MmLlHhVvCcSsQqTtAaZz]|-?\d*\.?\d+(?:[eE][-+]?\d+)?", data or "")
 
             def is_cmd(tok: str) -> bool:
                 return len(tok) == 1 and tok.isalpha()
-
-            def read_numbers(n: int) -> List[float]:
-                nonlocal idx
-                vals = []
-                for _ in range(n):
-                    if idx >= len(tokens):
-                        break
-                    vals.append(float(tokens[idx]))
-                    idx += 1
-                return vals
-
-            def cubic_samples(p0, p1, p2, p3, steps: int = 10):
-                out = []
-                for i in range(1, steps + 1):
-                    t = i / steps
-                    mt = 1 - t
-                    x = (
-                        mt * mt * mt * p0[0]
-                        + 3 * mt * mt * t * p1[0]
-                        + 3 * mt * t * t * p2[0]
-                        + t * t * t * p3[0]
-                    )
-                    y = (
-                        mt * mt * mt * p0[1]
-                        + 3 * mt * mt * t * p1[1]
-                        + 3 * mt * t * t * p2[1]
-                        + t * t * t * p3[1]
-                    )
-                    out.append((x, y))
-                return out
-
-            def quad_samples(p0, p1, p2, steps: int = 10):
-                out = []
-                for i in range(1, steps + 1):
-                    t = i / steps
-                    mt = 1 - t
-                    x = mt * mt * p0[0] + 2 * mt * t * p1[0] + t * t * p2[0]
-                    y = mt * mt * p0[1] + 2 * mt * t * p1[1] + t * t * p2[1]
-                    out.append((x, y))
-                return out
 
             tokens = tokenize(d)
             segments: List[List[tuple[float, float]]] = []
@@ -876,7 +866,19 @@ class ExportService:
             cmd = ""
             cursor = (0.0, 0.0)
             start_point = (0.0, 0.0)
-            last_ctrl: tuple[float, float] | None = None
+
+            def read_numbers(n: int) -> List[float]:
+                nonlocal idx
+                vals = []
+                for _ in range(n):
+                    if idx >= len(tokens):
+                        break
+                    try:
+                        vals.append(float(tokens[idx]))
+                        idx += 1
+                    except:
+                        break
+                return vals
 
             def move_to(pt: tuple[float, float]):
                 nonlocal cursor, start_point, current
@@ -910,7 +912,6 @@ class ExportService:
                         x += cursor[0]
                         y += cursor[1]
                     move_to((x, y))
-                    # 额外的坐标对视为连续 lineto
                     while idx < len(tokens) and not is_cmd(tokens[idx]):
                         extra = read_numbers(2)
                         if len(extra) < 2:
@@ -920,7 +921,6 @@ class ExportService:
                             ex += cursor[0]
                             ey += cursor[1]
                         line_to((ex, ey))
-                    last_ctrl = None
                     cmd = "L" if abs_cmd == "M" else "l"
                 elif abs_cmd == "L":
                     while idx < len(tokens) and not is_cmd(tokens[idx]):
@@ -932,7 +932,6 @@ class ExportService:
                             x += cursor[0]
                             y += cursor[1]
                         line_to((x, y))
-                    last_ctrl = None
                 elif abs_cmd == "H":
                     while idx < len(tokens) and not is_cmd(tokens[idx]):
                         nums = read_numbers(1)
@@ -941,7 +940,6 @@ class ExportService:
                         x = nums[0]
                         x = x + cursor[0] if is_relative else x
                         line_to((x, cursor[1]))
-                    last_ctrl = None
                 elif abs_cmd == "V":
                     while idx < len(tokens) and not is_cmd(tokens[idx]):
                         nums = read_numbers(1)
@@ -950,100 +948,16 @@ class ExportService:
                         y = nums[0]
                         y = y + cursor[1] if is_relative else y
                         line_to((cursor[0], y))
-                    last_ctrl = None
-                elif abs_cmd == "C":
-                    while idx < len(tokens) and not is_cmd(tokens[idx]):
-                        nums = read_numbers(6)
-                        if len(nums) < 6:
-                            break
-                        x1, y1, x2, y2, x, y = nums
-                        if is_relative:
-                            x1 += cursor[0]; y1 += cursor[1]
-                            x2 += cursor[0]; y2 += cursor[1]
-                            x += cursor[0]; y += cursor[1]
-                        samples = cubic_samples(cursor, (x1, y1), (x2, y2), (x, y))
-                        for pt in samples:
-                            line_to(pt)
-                        cursor = (x, y)
-                        last_ctrl = (x2, y2)
-                elif abs_cmd == "S":
-                    while idx < len(tokens) and not is_cmd(tokens[idx]):
-                        nums = read_numbers(4)
-                        if len(nums) < 4:
-                            break
-                        x2, y2, x, y = nums
-                        if is_relative:
-                            x2 += cursor[0]; y2 += cursor[1]
-                            x += cursor[0]; y += cursor[1]
-                        if last_ctrl is None:
-                            x1, y1 = cursor
-                        else:
-                            x1 = 2 * cursor[0] - last_ctrl[0]
-                            y1 = 2 * cursor[1] - last_ctrl[1]
-                        samples = cubic_samples(cursor, (x1, y1), (x2, y2), (x, y))
-                        for pt in samples:
-                            line_to(pt)
-                        cursor = (x, y)
-                        last_ctrl = (x2, y2)
-                elif abs_cmd == "Q":
-                    while idx < len(tokens) and not is_cmd(tokens[idx]):
-                        nums = read_numbers(4)
-                        if len(nums) < 4:
-                            break
-                        x1, y1, x, y = nums
-                        if is_relative:
-                            x1 += cursor[0]; y1 += cursor[1]
-                            x += cursor[0]; y += cursor[1]
-                        samples = quad_samples(cursor, (x1, y1), (x, y))
-                        for pt in samples:
-                            line_to(pt)
-                        cursor = (x, y)
-                        last_ctrl = (x1, y1)
-                elif abs_cmd == "T":
-                    while idx < len(tokens) and not is_cmd(tokens[idx]):
-                        nums = read_numbers(2)
-                        if len(nums) < 2:
-                            break
-                        x, y = nums
-                        if is_relative:
-                            x += cursor[0]; y += cursor[1]
-                        if last_ctrl is None:
-                            x1, y1 = cursor
-                        else:
-                            x1 = 2 * cursor[0] - last_ctrl[0]
-                            y1 = 2 * cursor[1] - last_ctrl[1]
-                        samples = quad_samples(cursor, (x1, y1), (x, y))
-                        for pt in samples:
-                            line_to(pt)
-                        cursor = (x, y)
-                        last_ctrl = (x1, y1)
-                elif abs_cmd == "A":
-                    # 复杂弧线退化为直线到终点
-                    while idx < len(tokens) and not is_cmd(tokens[idx]):
-                        nums = read_numbers(7)
-                        if len(nums) < 7:
-                            break
-                        # rx, ry, x-axis-rotation, large-arc-flag, sweep-flag, x, y
-                        x = nums[-2]
-                        y = nums[-1]
-                        if is_relative:
-                            x += cursor[0]; y += cursor[1]
-                        line_to((x, y))
-                        cursor = (x, y)
-                        last_ctrl = None
                 elif abs_cmd == "Z":
-                    # 闭合当前子路径
                     if current and (current[-1] != start_point):
                         current.append(start_point)
                     if current:
                         segments.append(current)
                         current = []
                     cursor = start_point
-                    last_ctrl = None
                 else:
-                    # 未支持的命令，跳过
+                    # 其他命令简化处理：跳过
                     idx += 1
-                    last_ctrl = None
 
             if current:
                 segments.append(current)
@@ -1051,7 +965,7 @@ class ExportService:
 
         for el in root.iter():
             if el in defs_nodes:
-                continue  # 跳过 marker/defs 内部的装饰元素
+                continue
             tag = el.tag.split("}")[-1].lower()
             dashed = "[dashed]" if is_dashed(el) else ""
             if tag == "line":
@@ -1073,17 +987,14 @@ class ExportService:
                         coords = " -- ".join(["(%.3f,%.3f)" % (x * scale, flip_y(y)) for x, y in seg])
                         cmds.append(r"\draw%s %s;" % (dashed, coords))
             elif tag == "rect":
-                # 矩形：左上角 (x, y)，宽 width，高 height
                 x, y = fmt(el.get("x")), fmt(el.get("y"))
                 w, h = fmt(el.get("width")), fmt(el.get("height"))
-                # 只绘制有 stroke 的矩形，忽略纯背景
                 stroke = el.get("stroke", "")
                 if stroke and stroke.lower() != "none":
                     x1, y1 = x * scale, flip_y(y)
                     x2, y2 = (x + w) * scale, flip_y(y + h)
                     cmds.append(r"\draw%s (%.3f,%.3f) rectangle (%.3f,%.3f);" % (dashed, x1, y1, x2, y2))
             elif tag == "polygon":
-                # 多边形：points="x1,y1 x2,y2 x3,y3 ..."
                 points_str = el.get("points", "")
                 pts = []
                 for pt in points_str.replace(",", " ").split():
@@ -1091,7 +1002,7 @@ class ExportService:
                         pts.append(float(pt))
                     except:
                         continue
-                if len(pts) >= 6:  # 至少 3 个点
+                if len(pts) >= 6:
                     coords = []
                     for i in range(0, len(pts), 2):
                         if i + 1 < len(pts):
@@ -1101,15 +1012,13 @@ class ExportService:
             elif tag == "text":
                 x, y = fmt(el.get("x")), fmt(el.get("y"))
                 dx = fmt(el.get("dx"))
-                dy = -fmt(el.get("dy"))  # dy 需要翻转
+                dy = -fmt(el.get("dy"))
                 txt = self._normalize_math_content((el.text or "").strip())
                 if txt:
-                    # 用数学模式包裹文字（适合坐标点标签）
                     cmds.append(r"\node at (%.3f,%.3f) {$%s$};" % ((x + dx) * scale, flip_y(y) + dy * scale, txt))
 
         if not cmds:
             return None
-        # 高考卷风格：居中、适当缩放、细线条
         tikz = ["\\begin{tikzpicture}[>=Stealth, scale=0.8, line width=0.5pt]", *cmds, "\\end{tikzpicture}"]
         return "\n".join(tikz)
 

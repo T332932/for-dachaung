@@ -1,0 +1,40 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{ctex}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,patterns,calc}
+\geometry{left=2cm,right=2cm,top=2.5cm,bottom=2.5cm}
+\begin{document}
+下图是函数 $y = \sin(\omega x + \phi)$ 的部分图像, 则 $\sin(\omega x + \phi)=$
+
+\par A. $\sin(x + \frac{\pi}{3})$
+
+\par B. $\sin(\frac{\pi}{3} - 2x)$
+
+\par C. $\cos(2x + \frac{\pi}{6})$
+
+\par D. $\cos(\frac{5\pi}{6} - 2x)$
+
+
+\par\noindent\hfill\begin{minipage}{0.45\textwidth}\centering
+\begin{tikzpicture}[scale=1.2, line width=0.5pt, >=Stealth[length=4pt], every node/.style={font=\small, inner sep=1pt}]
+  \draw[->] (-0.5, 0) -- (3, 0) node[below] {$x$};
+  \draw[->] (0, -1.2) -- (0, 1.2) node[left] {$y$};
+  \node[below left=1pt] at (0,0) {$O$};
+  \draw[domain=-0.4:2.8, samples=100, smooth, color=blue, line width=0.6pt] plot (\x, {sin(2*\x r + 2*pi/3)});
+  \node[below] at (pi/6, 0) {$\frac{\pi}{6}$};
+  \draw (pi/6, 0.05) -- (pi/6, -0.05);
+  \node[below] at (2*pi/3, 0) {$\frac{2\pi}{3}$};
+  \draw (2*pi/3, 0.05) -- (2*pi/3, -0.05);
+  \node[left] at (0, 1) {$1$};
+  \draw (0.05, 1) -- (-0.05, 1);
+  \node[left] at (0, -1) {$-1$};
+  \draw (0.05, -1) -- (-0.05, -1);
+\end{tikzpicture}
+\end{minipage}\hfill\null
+
+
+
+\textbf{答案：} C\end{document}

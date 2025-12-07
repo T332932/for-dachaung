@@ -1,0 +1,55 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{ctex}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,patterns,calc}
+\geometry{left=2cm,right=2cm,top=2.5cm,bottom=2.5cm}
+\begin{document}
+10. 下图是函数 $y = \sin(\omega x + \phi)$ 的部分图像, 则 $\sin(\omega x + \phi)=$
+
+  ![函数图像](...)
+
+\par A. $\sin(x + \frac{\pi}{3})$
+
+\par B. $\sin(\frac{\pi}{3} - 2x)$
+
+\par C. $\cos(2x + \frac{\pi}{6})$
+
+\par D. $\cos(\frac{5\pi}{6} - 2x)$
+
+
+\par\noindent\hfill\begin{minipage}{0.45\textwidth}\centering
+\begin{tikzpicture}[scale=0.75, line width=0.5pt, >=Stealth[length=4pt], every node/.style={font=\small, inner sep=1pt}]
+\draw[->] (-0.5, 0) -- (3.5, 0) node[below] {$x$};
+\draw[->] (0, -1.5) -- (0, 1.5) node[left] {$y$};
+\node[below left] at (0,0) {$O$};
+
+\draw[domain=-0.3:3.2, samples=100, smooth, thick, color=blue] plot (\x, {sin((\x r) + pi/3 r)});
+
+\draw (1.57, 0.05) -- (1.57, -0.05) node[below] {$\frac{2\pi}{3}$};
+\node at ({pi/6}, -0.05) {$\shortmid$};
+\node[below] at ({pi/6}, -0.05) {$\frac{\pi}{6}$};
+\draw (-0.05, 1) -- (0.05, 1) node[right] {$1$};
+
+\draw[dashed] ({pi/6}, 0) -- ({pi/6}, 1) -- (0, 1);
+\node[circle, fill, inner sep=1pt] at ({pi/6}, 1) {};
+\node[circle, fill, inner sep=1pt] at ({2*pi/3}, 0) {};
+
+% Corrected x-axis tick labels to decimal for pgfplots compatibility
+% x=pi/6 is approx 0.52
+% x=2pi/3 is approx 2.09
+\draw[dashed] (0.52, 0) -- (0.52, 1) -- (0, 1);
+\node[circle, fill, inner sep=1pt] at (0.52, 1) {};
+\node[circle, fill, inner sep=1pt] at (2.09, 0) {};
+\draw (2.09, 0.05) -- (2.09, -0.05) node[below] {$\frac{2\pi}{3}$};
+\node at (0.52, -0.05) {$\shortmid$};
+\node[below] at (0.52, -0.05) {$\frac{\pi}{6}$};
+
+\end{tikzpicture}
+\end{minipage}\hfill\null
+
+
+
+\textbf{答案：} 由函数图像可知...(省略)...故选 A。\end{document}
