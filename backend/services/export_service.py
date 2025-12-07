@@ -552,25 +552,45 @@ class ExportService:
                             label = chr(ord('A') + i)
                             item_parts.append(r"{\sf %s}．%s\quad" % (label, self._escape_latex(self._strip_option_prefix(opt))))
                     
-                    # 图形
+                    # 获取图形内容（如果有）
+                    diagram_content = None
                     if q.has_geometry and q.geometry_tikz:
-                        item_parts.append(self._wrap_diagram_block(q.geometry_tikz))
+                        diagram_content = q.geometry_tikz
                     elif q.has_geometry and q.geometry_svg:
                         tikz_block = self._svg_to_tikz_block(q.geometry_svg)
                         if tikz_block:
-                            item_parts.append(self._wrap_diagram_block(tikz_block))
+                            diagram_content = tikz_block
                         else:
                             # TikZ 失败，fallback 到 PDF（矢量格式）
                             svg_result = self._svg_to_pdf_attachment(q.geometry_svg)
                             if svg_result:
                                 fname, data = svg_result
                                 attachments.append((fname, data))
-                                img = f'\\includegraphics[width=0.48\\textwidth]{{{fname}}}'
-                                item_parts.append(self._wrap_diagram_block(img))
+                                diagram_content = f'\\includegraphics[width=0.35\\textwidth]{{{fname}}}'
                     
-                    # 解答题留白（不含答案时）
-                    if section_type == 'solve' and not include_answer:
-                        item_parts.append("\n" + r"\vspace{6em}")
+                    # 根据题型决定图形布局
+                    if section_type == 'solve':
+                        # 解答题：图在留白左侧（左图右留白）
+                        if diagram_content and not include_answer:
+                            item_parts.append("\n" + r"\par\noindent")
+                            item_parts.append(r"\begin{minipage}[t]{0.45\textwidth}")
+                            item_parts.append(r"\centering")
+                            item_parts.append(diagram_content)
+                            item_parts.append(r"\end{minipage}")
+                            item_parts.append(r"\hfill")
+                            item_parts.append(r"\begin{minipage}[t]{0.5\textwidth}")
+                            item_parts.append(r"\vspace{8em}")  # 留白区域
+                            item_parts.append(r"\end{minipage}")
+                        elif diagram_content:
+                            # 有答案时，图片正常显示
+                            item_parts.append(self._wrap_diagram_block(diagram_content))
+                        elif not include_answer:
+                            # 没有图但需要留白
+                            item_parts.append("\n" + r"\vspace{6em}")
+                    else:
+                        # 选填题：图在题干右侧（右对齐悬挂）
+                        if diagram_content:
+                            item_parts.append(self._wrap_diagram_block(diagram_content))
                     
                     # 答案和解析
                     if include_answer and q.answer:
