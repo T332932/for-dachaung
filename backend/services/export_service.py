@@ -401,6 +401,7 @@ class ExportService:
 \usepackage{graphicx}
 \usepackage{enumitem}
 \setenumerate{itemsep=0pt,partopsep=0pt,parsep=\parskip,topsep=0pt}
+\allowdisplaybreaks[4]
 
 \usepackage[paperheight=26cm,paperwidth=18.4cm,left=2cm,right=2cm,top=1.5cm,bottom=2cm,headsep=10pt]{geometry}
 \usepackage{fancyhdr}
@@ -560,7 +561,7 @@ class ExportService:
                     
                     # 解答题留白（不含答案时）
                     if section_type == 'solve' and not include_answer:
-                        item_parts.append("\n" + r"\vspace{10em}")
+                        item_parts.append("\n" + r"\vspace{6em}")
                     
                     # 答案和解析
                     if include_answer and q.answer:
@@ -1082,7 +1083,7 @@ class ExportService:
         if not content:
             return ""
         return (
-            "\n\\par\\noindent\\hfill\\begin{minipage}{0.48\\textwidth}\\centering\n"
+            "\n\\par\\noindent\\hfill\\begin{minipage}{0.45\\textwidth}\\centering\n"
             + content
             + "\n\\end{minipage}\\hfill\\null\n"
         )
