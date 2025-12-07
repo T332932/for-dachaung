@@ -759,17 +759,239 @@ class ExportService:
             dasharray = el.get("stroke-dasharray", "")
             return ("dash" in style) or ("dash" in cls) or (dasharray not in ("", None))
 
-        def parse_path(d: str) -> List[tuple[float, float]]:
+        def parse_path(d: str) -> List[List[tuple[float, float]]]:
+            """
+            粗略解析 path 数据，支持直线/水平/垂直/二次、三次贝塞尔曲线。
+            返回若干折线段，每段为点列表，后续用 -- 连接。
+            复杂的弧线（A/a）会退化为直线连接起终点。
+            """
             import re
-            pts = []
-            # 支持逗号或空格分隔的坐标格式: M 20.00,150.00 或 M 20.00 150.00 或 L 22,143
-            parts = re.findall(r'[ML]\s*([-\d.]+)[,\s]+([-\d.]+)', d or "", re.IGNORECASE)
-            for x, y in parts:
-                try:
-                    pts.append((float(x), float(y)))
-                except Exception:
-                    continue
-            return pts
+
+            def tokenize(data: str) -> List[str]:
+                return re.findall(r"[MmLlHhVvCcSsQqTtAaZz]|-?\d*\.?\d+(?:[eE][-+]?\d+)?", data or "")
+
+            def is_cmd(tok: str) -> bool:
+                return len(tok) == 1 and tok.isalpha()
+
+            def read_numbers(n: int) -> List[float]:
+                nonlocal idx
+                vals = []
+                for _ in range(n):
+                    if idx >= len(tokens):
+                        break
+                    vals.append(float(tokens[idx]))
+                    idx += 1
+                return vals
+
+            def cubic_samples(p0, p1, p2, p3, steps: int = 10):
+                out = []
+                for i in range(1, steps + 1):
+                    t = i / steps
+                    mt = 1 - t
+                    x = (
+                        mt * mt * mt * p0[0]
+                        + 3 * mt * mt * t * p1[0]
+                        + 3 * mt * t * t * p2[0]
+                        + t * t * t * p3[0]
+                    )
+                    y = (
+                        mt * mt * mt * p0[1]
+                        + 3 * mt * mt * t * p1[1]
+                        + 3 * mt * t * t * p2[1]
+                        + t * t * t * p3[1]
+                    )
+                    out.append((x, y))
+                return out
+
+            def quad_samples(p0, p1, p2, steps: int = 10):
+                out = []
+                for i in range(1, steps + 1):
+                    t = i / steps
+                    mt = 1 - t
+                    x = mt * mt * p0[0] + 2 * mt * t * p1[0] + t * t * p2[0]
+                    y = mt * mt * p0[1] + 2 * mt * t * p1[1] + t * t * p2[1]
+                    out.append((x, y))
+                return out
+
+            tokens = tokenize(d)
+            segments: List[List[tuple[float, float]]] = []
+            current: List[tuple[float, float]] = []
+            idx = 0
+            cmd = ""
+            cursor = (0.0, 0.0)
+            start_point = (0.0, 0.0)
+            last_ctrl: tuple[float, float] | None = None
+
+            def move_to(pt: tuple[float, float]):
+                nonlocal cursor, start_point, current
+                if current:
+                    segments.append(current)
+                current = [pt]
+                cursor = pt
+                start_point = pt
+
+            def line_to(pt: tuple[float, float]):
+                nonlocal cursor
+                current.append(pt)
+                cursor = pt
+
+            while idx < len(tokens):
+                if is_cmd(tokens[idx]):
+                    cmd = tokens[idx]
+                    idx += 1
+                if cmd == "":
+                    break
+
+                abs_cmd = cmd.upper()
+                is_relative = cmd.islower()
+
+                if abs_cmd == "M":
+                    nums = read_numbers(2)
+                    if len(nums) < 2:
+                        break
+                    x, y = nums
+                    if is_relative:
+                        x += cursor[0]
+                        y += cursor[1]
+                    move_to((x, y))
+                    # 额外的坐标对视为连续 lineto
+                    while idx < len(tokens) and not is_cmd(tokens[idx]):
+                        extra = read_numbers(2)
+                        if len(extra) < 2:
+                            break
+                        ex, ey = extra
+                        if is_relative:
+                            ex += cursor[0]
+                            ey += cursor[1]
+                        line_to((ex, ey))
+                    last_ctrl = None
+                    cmd = "L" if abs_cmd == "M" else "l"
+                elif abs_cmd == "L":
+                    while idx < len(tokens) and not is_cmd(tokens[idx]):
+                        nums = read_numbers(2)
+                        if len(nums) < 2:
+                            break
+                        x, y = nums
+                        if is_relative:
+                            x += cursor[0]
+                            y += cursor[1]
+                        line_to((x, y))
+                    last_ctrl = None
+                elif abs_cmd == "H":
+                    while idx < len(tokens) and not is_cmd(tokens[idx]):
+                        nums = read_numbers(1)
+                        if not nums:
+                            break
+                        x = nums[0]
+                        x = x + cursor[0] if is_relative else x
+                        line_to((x, cursor[1]))
+                    last_ctrl = None
+                elif abs_cmd == "V":
+                    while idx < len(tokens) and not is_cmd(tokens[idx]):
+                        nums = read_numbers(1)
+                        if not nums:
+                            break
+                        y = nums[0]
+                        y = y + cursor[1] if is_relative else y
+                        line_to((cursor[0], y))
+                    last_ctrl = None
+                elif abs_cmd == "C":
+                    while idx < len(tokens) and not is_cmd(tokens[idx]):
+                        nums = read_numbers(6)
+                        if len(nums) < 6:
+                            break
+                        x1, y1, x2, y2, x, y = nums
+                        if is_relative:
+                            x1 += cursor[0]; y1 += cursor[1]
+                            x2 += cursor[0]; y2 += cursor[1]
+                            x += cursor[0]; y += cursor[1]
+                        samples = cubic_samples(cursor, (x1, y1), (x2, y2), (x, y))
+                        for pt in samples:
+                            line_to(pt)
+                        cursor = (x, y)
+                        last_ctrl = (x2, y2)
+                elif abs_cmd == "S":
+                    while idx < len(tokens) and not is_cmd(tokens[idx]):
+                        nums = read_numbers(4)
+                        if len(nums) < 4:
+                            break
+                        x2, y2, x, y = nums
+                        if is_relative:
+                            x2 += cursor[0]; y2 += cursor[1]
+                            x += cursor[0]; y += cursor[1]
+                        if last_ctrl is None:
+                            x1, y1 = cursor
+                        else:
+                            x1 = 2 * cursor[0] - last_ctrl[0]
+                            y1 = 2 * cursor[1] - last_ctrl[1]
+                        samples = cubic_samples(cursor, (x1, y1), (x2, y2), (x, y))
+                        for pt in samples:
+                            line_to(pt)
+                        cursor = (x, y)
+                        last_ctrl = (x2, y2)
+                elif abs_cmd == "Q":
+                    while idx < len(tokens) and not is_cmd(tokens[idx]):
+                        nums = read_numbers(4)
+                        if len(nums) < 4:
+                            break
+                        x1, y1, x, y = nums
+                        if is_relative:
+                            x1 += cursor[0]; y1 += cursor[1]
+                            x += cursor[0]; y += cursor[1]
+                        samples = quad_samples(cursor, (x1, y1), (x, y))
+                        for pt in samples:
+                            line_to(pt)
+                        cursor = (x, y)
+                        last_ctrl = (x1, y1)
+                elif abs_cmd == "T":
+                    while idx < len(tokens) and not is_cmd(tokens[idx]):
+                        nums = read_numbers(2)
+                        if len(nums) < 2:
+                            break
+                        x, y = nums
+                        if is_relative:
+                            x += cursor[0]; y += cursor[1]
+                        if last_ctrl is None:
+                            x1, y1 = cursor
+                        else:
+                            x1 = 2 * cursor[0] - last_ctrl[0]
+                            y1 = 2 * cursor[1] - last_ctrl[1]
+                        samples = quad_samples(cursor, (x1, y1), (x, y))
+                        for pt in samples:
+                            line_to(pt)
+                        cursor = (x, y)
+                        last_ctrl = (x1, y1)
+                elif abs_cmd == "A":
+                    # 复杂弧线退化为直线到终点
+                    while idx < len(tokens) and not is_cmd(tokens[idx]):
+                        nums = read_numbers(7)
+                        if len(nums) < 7:
+                            break
+                        # rx, ry, x-axis-rotation, large-arc-flag, sweep-flag, x, y
+                        x = nums[-2]
+                        y = nums[-1]
+                        if is_relative:
+                            x += cursor[0]; y += cursor[1]
+                        line_to((x, y))
+                        cursor = (x, y)
+                        last_ctrl = None
+                elif abs_cmd == "Z":
+                    # 闭合当前子路径
+                    if current and (current[-1] != start_point):
+                        current.append(start_point)
+                    if current:
+                        segments.append(current)
+                        current = []
+                    cursor = start_point
+                    last_ctrl = None
+                else:
+                    # 未支持的命令，跳过
+                    idx += 1
+                    last_ctrl = None
+
+            if current:
+                segments.append(current)
+            return segments
 
         for el in root.iter():
             tag = el.tag.split("}")[-1].lower()
@@ -787,10 +1009,11 @@ class ExportService:
                 rx, ry = fmt(el.get("rx")), fmt(el.get("ry"))
                 cmds.append(r"\draw%s (%.3f,%.3f) ellipse (%.3f and %.3f);" % (dashed, cx * scale, flip_y(cy), rx * scale, ry * scale))
             elif tag == "path":
-                pts = parse_path(el.get("d") or "")
-                if len(pts) >= 2:
-                    coords = " -- ".join(["(%.3f,%.3f)" % (x * scale, flip_y(y)) for x, y in pts])
-                    cmds.append(r"\draw%s %s;" % (dashed, coords))
+                segments = parse_path(el.get("d") or "")
+                for seg in segments:
+                    if len(seg) >= 2:
+                        coords = " -- ".join(["(%.3f,%.3f)" % (x * scale, flip_y(y)) for x, y in seg])
+                        cmds.append(r"\draw%s %s;" % (dashed, coords))
             elif tag == "rect":
                 # 矩形：左上角 (x, y)，宽 width，高 height
                 x, y = fmt(el.get("x")), fmt(el.get("y"))
