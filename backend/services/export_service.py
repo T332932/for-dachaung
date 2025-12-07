@@ -447,6 +447,9 @@ class ExportService:
 %% 填空横线（兼容数学模式和文本模式）
 \newcommand{\undsp}{\underline{\makebox[3em]{}}}
 
+%% 斜着的平行符号（高考风格）
+\newcommand{\spar}{\mathrel{/\mkern-5mu/}}
+
 \begin{document}
 \SetMathEnvironmentSinglespace{1}
 \lineskiplimit=5.5pt
@@ -1155,7 +1158,7 @@ class ExportService:
             # 常见符号/习惯用法替换为 LaTeX 形式（仅在文本环境处理）
             replacements = {
                 "π": r"$\pi$",
-                "∥": r"$\parallel$",
+                "∥": r"$\spar$",
                 "∞": r"$\infty$",
                 "×": r"$\times$",
                 "÷": r"$\div$",
@@ -1163,7 +1166,7 @@ class ExportService:
             }
             for k, v in replacements.items():
                 t = t.replace(k, v)
-            t = re.sub(r"\s//\s", r" \\parallel ", t)
+            t = re.sub(r"\s//\s", r" \\spar ", t)
             return t
         
         result = []
@@ -1230,7 +1233,7 @@ class ExportService:
         # Unicode 符号替换
         replacements = {
             "π": r"\pi",
-            "∥": r"\parallel",
+            "∥": r"\spar",
             "∞": r"\infty",
             "×": r"\times",
             "÷": r"\div",
@@ -1251,5 +1254,5 @@ class ExportService:
             # 匹配单词边界，且前面不能有反斜杠（避免重复转义）
             text = re.sub(rf"(?<!\\)\b{fn}\b", rf"\\{fn}", text)
         # 将惯用的 // 视为平行符号，避免 URL 误替换：排除前面有冒号或反斜杠的情况
-        text = re.sub(r"(?<!:)(?<!\\)//", r"\\parallel ", text)
+        text = re.sub(r"(?<!:)(?<!\\)//", r"\\spar ", text)
         return text
