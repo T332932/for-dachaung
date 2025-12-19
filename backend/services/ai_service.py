@@ -412,16 +412,16 @@ SVG 重绘要求：
 
     def _strip_images(self, text: str) -> str:
         """
-        去掉 questionText 中的 markdown 图片（尤其是 data:image base64），保留纯文本。
+        去掉 questionText 中的 markdown 图片和 HTML img 标签，保留纯文本。
         """
         if not text:
             return ""
-        # 优先移除 base64 图片
-        text = re.sub(r'!\[[^\]]*\]\(data:image/[^)]+\)', '', text)
-        # 可选：移除所有 Markdown 图片（如需）：
-        # text = re.sub(r'!\[[^\]]*\]\([^)]+\)', '', text)
+        # 移除所有 Markdown 图片（包括空图片 ![]() 和带 URL 的）
+        text = re.sub(r'!\[[^\]]*\]\([^)]*\)', '', text)
         # 去掉 HTML <img ...>
         text = re.sub(r'<img[^>]*>', '', text, flags=re.IGNORECASE)
+        # 清理多余空行
+        text = re.sub(r'\n{3,}', '\n\n', text)
         return text
     
     def _stub_response(self, filename: str):

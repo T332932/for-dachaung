@@ -1,0 +1,36 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f0f7ff', 'actorBkg': '#e6f3ff', 'actorBorder': '#003366', 'primaryTextColor': '#003366', 'signalColor': '#003366', 'activationBorderColor': '#003366'}}}%%
+sequenceDiagram
+    autonumber
+    participant U as 教师用户
+    participant F as 前端应用
+    participant B as 后端 API
+    participant AI as AI 服务
+    participant DB as 数据库
+    participant E as 导出引擎
+    
+    rect rgb(232, 244, 248)
+        Note over U,DB: 题目识别流程
+        U->>F: 上传题目图片
+        F->>B: POST /api/teacher/analyze
+        B->>AI: 调用 Gemini/GPT-4V
+        AI-->>B: 返回识别结果 JSON
+        B-->>F: 展示识别结果
+        U->>F: 审核确认/修改
+        F->>B: POST /api/teacher/questions
+        B->>DB: 保存题目数据
+        DB-->>B: 确认保存
+        B-->>F: 返回成功
+    end
+    
+    rect rgb(255, 248, 240)
+        Note over U,E: 试卷导出流程
+        U->>F: 创建试卷/选题
+        F->>B: POST /api/teacher/papers
+        B->>DB: 保存试卷
+        U->>F: 请求导出试卷
+        F->>B: GET /api/teacher/papers/{id}/export
+        B->>E: 生成 LaTeX/Word
+        E-->>B: 返回文件
+        B-->>F: 下载文件
+        F-->>U: 获得 PDF/Word 试卷
+    end

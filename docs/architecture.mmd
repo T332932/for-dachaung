@@ -1,0 +1,45 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f0f7ff', 'edgeLabelBackground':'#ffffff', 'tertiaryColor': '#e6f3ff', 'primaryTextColor': '#003366', 'primaryBorderColor': '#003366', 'lineColor': '#003366'}}}%%
+flowchart TB
+    subgraph UserLayer["用户层"]
+        Teacher{{教师端 Web}}
+        Student{{学生端 Web}}
+    end
+
+    subgraph FrontendLayer["表示层"]
+        Frontend[/"前端应用<br/>Next.js / React / TailwindCSS"\]
+    end
+
+    subgraph BackendLayer["业务逻辑层"]
+        API["API 网关<br/>FastAPI"]
+        Auth([认证服务])
+        Export([导出服务])
+        Review([审核服务])
+    end
+
+    subgraph AILayer["AI 服务层"]
+        Gemini[["Google Gemini<br/>Vision API"]]
+        OpenAI[["OpenAI<br/>GPT-4V API"]]
+    end
+
+    subgraph DataLayer["数据持久层"]
+        DB[("PostgreSQL<br/>题库数据")]
+        Cache[("Redis<br/>缓存")]
+    end
+
+    subgraph ExportLayer["导出引擎"]
+        LaTeX["LaTeX 引擎<br/>pdflatex"]
+        Docx["Word 引擎<br/>python-docx"]
+    end
+
+    Teacher --> Frontend
+    Student --> Frontend
+    Frontend --> API
+    API --> Auth
+    API --> Review
+    API --> Gemini
+    API --> OpenAI
+    API --> DB
+    API --> Cache
+    API --> Export
+    Export --> LaTeX
+    Export --> Docx

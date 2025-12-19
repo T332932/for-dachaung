@@ -1,0 +1,31 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f0f7ff', 'clusterBkg':'#ffffff', 'clusterBorder':'#003366', 'primaryTextColor': '#003366', 'primaryBorderColor': '#003366', 'lineColor': '#003366'}}}%%
+flowchart LR
+    subgraph Input["输入阶段"]
+        A(("题目图片<br/>手写/印刷"))
+    end
+
+    subgraph Processing["AI 处理阶段"]
+        direction TB
+        B["图像预处理"]
+        C[["多模态识别<br/>Gemini/GPT-4V"]]
+        D["结构化解析"]
+        B --> C --> D
+    end
+
+    subgraph Output["输出结果"]
+        direction TB
+        E["题干文本<br/>LaTeX 格式"]
+        F["几何图形<br/>SVG/TikZ"]
+        G["知识点标签"]
+        H["难度评估"]
+    end
+
+    subgraph Review["审核入库"]
+        I{{教师审核}}
+        J[("入库保存")]
+    end
+
+    A --> B
+    D --> E & F & G & H
+    E & F & G & H --> I
+    I --> J

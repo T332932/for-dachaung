@@ -1,0 +1,80 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" style="background-color:#f8f9fa; font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#0077c2" />
+    </marker>
+  </defs>
+  <!-- Main Title -->
+  <text x="600" y="45" font-size="28" font-weight="bold" text-anchor="middle" fill="#333">项目研究方法与技术路线</text>
+  <text x="600" y="75" font-size="16" text-anchor="middle" fill="#555">以行动研究为指导，采用“设计-开发-应用-优化”的迭代模式</text>
+  <!-- Central Hub -->
+  <circle cx="600" cy="350" r="100" fill="#ffffff" stroke="#e0e0e0" stroke-width="2"/>
+  <g transform="translate(580, 325)">
+    <path d="M20 12c0-4.42-3.58-8-8-8s-8 3.58-8 8 3.58 8 8 8 8-3.58 8-8zm-8 6c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z M26.39 9.61l-2.78-1.57c.53-1.01.8-2.14.8-3.31h-3.31c-.13 1.25-.56 2.42-1.22 3.44l-2.4-2.4C16.48 4.78 14.36 4 12 4c-1.12 0-2.19.24-3.17.67L7.25 2.1C8.75 1.41 10.33 1 12 1c3.5 0 6.64 1.83 8.48 4.61l2.52-1.42c.49-.28 1.1-.11 1.38.38s.11 1.1-.38 1.38z M3.61 9.61c.28-.49.11-1.1-.38-1.38s-1.1.11-1.38.38l-2.52 1.42C.17 7.83-1.5 5-3.02 4.61L.48 2.1C1.98 1.41 3.56 1 5.23 1c-2.37 0-4.49.78-6.17 2.07l2.4 2.4c.66-1.02 1.09-2.19 1.22-3.44H.33c-.01 1.17.27 2.3.8 3.31l-2.78 1.57c-.49.28-.66.89-.38 1.38s.89.66 1.38.38L3.61 9.61z" fill="#0077c2" transform="scale(2.5)"/>
+  </g>
+  <text x="600" y="385" font-size="16" font-weight="bold" text-anchor="middle" fill="#005a9c">核心目标</text>
+  <text x="600" y="408" font-size="13" text-anchor="middle" fill="#333">开发科学、实用的</text>
+  <text x="600" y="425" font-size="13" text-anchor="middle" fill="#333">高中-大学数学衔接课程</text>
+  <!-- Quadrant 1: Top Left -->
+  <g transform="translate(100, 120)">
+    <rect width="350" height="180" rx="15" fill="#ffffff" stroke="#e0e0e0" stroke-width="1.5"/>
+    <g transform="translate(20, 25)">
+      <path d="M12 2C8.69 2 6 4.69 6 8c0 2.5 1.43 4.6 3.43 5.59L10 16h4l.57-2.41C16.57 12.6 18 10.5 18 8c0-3.31-2.69-6-6-6zm-2 18h8v2H10v-2z" fill="#ff6f00" transform="scale(1.2)" />
+      <text x="30" y="15" font-size="16" font-weight="bold" fill="#ff6f00">阶段一：理论建构与需求分析</text>
+    </g>
+    <text x="25" y="70" font-size="14" fill="#333" >
+      <tspan x="25" dy="1.2em">• 文献研究：梳理衔接理论，分析国内外案例。</tspan>
+      <tspan x="25" dy="1.5em">• 内容分析：对比新旧课标与大学教材，定位知识“断点”。</tspan>
+      <tspan x="25" dy="1.5em">• 专家访谈：深入访谈高中与大学一线教师，明确实践需求。</tspan>
+    </text>
+  </g>
+  <!-- Quadrant 2: Top Right -->
+  <g transform="translate(750, 120)">
+    <rect width="350" height="180" rx="15" fill="#ffffff" stroke="#e0e0e0" stroke-width="1.5"/>
+    <g transform="translate(20,25)">
+       <path d="M20 6h-2.18c-.45-1.73-2.02-3-3.82-3s-3.37 1.27-3.82 3H8c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 0c.98 0 1.81.7 1.98 1.63L15.96 8h-3.92c.17-.93 1-1.63 1.96-1.63z" fill="#0077c2" transform="scale(1.2)"/>
+       <text x="30" y="15" font-size="16" font-weight="bold" fill="#0077c2">阶段二：课程设计与资源开发</text>
+    </g>
+    <text x="25" y="70" font-size="14" fill="#333">
+      <tspan x="25" dy="1.2em">• 体系设计：构建模块化课程体系与分课时教案。</tspan>
+      <tspan x="25" dy="1.5em">• 资源开发：“教案+课件+微课+练习”四位一体资源包。</tspan>
+      <tspan x="25" dy="1.5em">• 技术支撑：LaTeX/TikZ精绘图形，Camtasia/OBS录制微课。</tspan>
+    </text>
+  </g>
+  <!-- Quadrant 3: Bottom Right -->
+  <g transform="translate(750, 400)">
+    <rect width="350" height="180" rx="15" fill="#ffffff" stroke="#e0e0e0" stroke-width="1.5"/>
+     <g transform="translate(20,25)">
+       <path d="M12 3L1 9l4 2.18v6.32L12 21l7-3.5V11.18L23 9 12 3zm0 15.69l-5-2.5V12.1l5 2.5v4.09zM12 10L3.81 6 12 2.69 20.19 6 12 10z" fill="#0077c2" transform="scale(1.2)"/>
+       <text x="30" y="15" font-size="16" font-weight="bold" fill="#0077c2">阶段三：试点教学与数据收集</text>
+    </g>
+    <text x="25" y="70" font-size="14" fill="#333">
+      <tspan x="25" dy="1.2em">• 校内试点：在合作高中开设选修课或课后服务。</tspan>
+      <tspan x="25" dy="1.5em">• 教学实验：采用前测-后测，评估教学效果。</tspan>
+      <tspan x="25" dy="1.5em">• 过程性数据：通过课堂观察、问卷调查收集师生反馈。</tspan>
+    </text>
+  </g>
+  <!-- Quadrant 4: Bottom Left -->
+  <g transform="translate(100, 400)">
+    <rect width="350" height="180" rx="15" fill="#ffffff" stroke="#e0e0e0" stroke-width="1.5"/>
+    <g transform="translate(20,25)">
+       <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14H7v-4h3v4zm0-6H7V7h3v4zm5 6h-3v-4h3v4zm0-6h-3V7h3v4z"  fill="#ff6f00" transform="scale(1.2)" />
+       <text x="30" y="15" font-size="16" font-weight="bold" fill="#ff6f00">阶段四：评估反馈与迭代优化</text>
+    </g>
+     <text x="25" y="70" font-size="14" fill="#333">
+      <tspan x="25" dy="1.2em">• 数据分析：综合运用质性与量化方法分析收集的数据。</tspan>
+      <tspan x="25" dy="1.5em">• 成果优化：根据反馈修正课程手册、优化教学资源。</tspan>
+      <tspan x="25" dy="1.5em">• 成果凝练：撰写研究报告与教师访谈报告，总结模式。</tspan>
+    </text>
+  </g>
+  <!-- Arrows -->
+  <path d="M 460 210 C 550 150, 650 150, 740 210" stroke="#0077c2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 925 310 C 985 350, 985 400, 925 490" stroke="#0077c2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 740 490 C 650 550, 550 550, 460 490" stroke="#0077c2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 275 490 C 215 400, 215 350, 275 300" stroke="#0077c2" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <!-- Bottom Timeline -->
+  <rect x="50" y="620" width="1100" height="50" rx="25" fill="#005a9c"/>
+  <text x="600" y="650" font-size="15" fill="white" text-anchor="middle" letter-spacing="1">
+    技术路线: 需求分析 → 知识图谱构建 → 模块化课程设计 → 可视化资源开发 → 试点应用与反馈 → 数据驱动优化 → 成果总结与推广
+  </text>
+</svg>
